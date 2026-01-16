@@ -81,53 +81,74 @@
           loader.register((parser) => new VRMLoaderPlugin(parser));
 
           loader.load('./avatar.vrm',
-              (gltf) => {
-                  const vrm = gltf.userData.vrm;
-                  vrm.scene.rotation.y = Math.PI;
-                  scene.add(vrm.scene);
-                  // scene.add(new THREE.AxesHelper(1));
-                  window.currentVrm = vrm;
 
-                  // Get bone positions
-                  const getBonePos = (boneName) => {
-                      const node = vrm.humanoid.getRawBoneNode(boneName);
-                      return node ? node.getWorldPosition(new THREE.Vector3()) : null;
-                  };
+          (gltf) => {
+              // log("✅ VRM Loaded Success!");
+              const vrm = gltf.userData.vrm;
+              vrm.scene.rotation.y = Math.PI;
+              scene.add(vrm.scene);
+              window.currentVrm = vrm;
 
-                  const headPos = getBonePos("head") || new THREE.Vector3(0, 1.5, 0);
-                  const hipsPos = getBonePos("hips") || new THREE.Vector3(0, 0.8, 0);
+              // --- 1. 鲁棒的骨骼位置获取 ---
+              // 能够处理标准骨骼缺失的情况，自动降级
+              const getBonePos = (boneName) => {
+            const node = vrm.humanoid.getRawBoneNode(boneName);
+            return node ? node.getWorldPosition(new THREE.Vector3()) : null;
+              };
 
-                  log(`Head: ${headPos.y.toFixed(2)}, Hips: ${hipsPos.y.toFixed(2)}`);
+              // 获取关键锚点
+              const defaultHead = new THREE.Vector3(0, 1.5, 0);
+              const defaultHips = new THREE.Vector3(0, 0.8, 0); // 假设臀部高度
 
-                  // Head mode setup
-                  CAMERA_STATES.head.target.copy(headPos);
-                  CAMERA_STATES.head.pos.set(0, headPos.y + 0.05, 0.65);
+              const headPos = getBonePos("head") || defaultHead;
+              const hipsPos = getBonePos("hips") || defaultHips;
 
-                  // Body mode setup
-                  const chestCenter = new THREE.Vector3().addVectors(headPos, hipsPos).multiplyScalar(0.5);
-                  // 稍微向上偏一点，聚焦在胸口以上，避免画面重心太低
-                  chestCenter.y += 0.1;
+              // 如果没有臀部骨骼，我们假设脊柱长度约为头高的 45%
+              if (!getBonePos("hips")) {
+                   hipsPos.y = headPos.y * 0.55;
+              }
 
-                  // 目标：看胸口
-                  CAMERA_STATES.body.target.copy(chestCenter);
+              log(`Detected - Head: ${headPos.y.toFixed(2)}, Hips: ${hipsPos.y.toFixed(2)}`);
 
-                  // 相机位置：
-                  // 高度(Y)：为了避免俯视，相机高度应该接近颈部/下巴的高度，而不是头顶
-                  const cameraY = headPos.y - 0.15;
-                  // 距离(Z)：根据上半身长度估算距离，确保头和臀都在画面内
-                  const upperBodyHeight = headPos.y - hipsPos.y;
-                  const distanceZ = Math.max(1.4, upperBodyHeight * 2.2); // 动态计算距离
+              // --- 2. [头部模式]：精准聚焦面部 ---
+              // VRM head 骨骼在脖子根部，脸中心大约在上方 10-12cm 处
+              const faceOffset = 0.05;
+              const facePos = new THREE.Vector3(headPos.x, headPos.y + faceOffset, headPos.z);
 
-                  CAMERA_STATES.body.pos.set(0, cameraY, distanceZ);
+              CAMERA_STATES.head.target.copy(facePos);
+              // 相机与脸同高，距离 0.55m，形成亲密的肖像感
+              CAMERA_STATES.head.pos.set(facePos.x, facePos.y, facePos.z + 0.55);
 
-                  setCameraMode('head', true);
 
-                  // 隐藏调试日志
-                  setTimeout(() => {
-                      const el = document.getElementById('debug-console');
-                      if(el) el.style.display = 'none';
-                  }, 2000);
-              },
+              // --- 3. [身体模式]：几何计算构图 (Head to Waist) ---
+              // 定义我们想看到的垂直范围：
+              // 上边界：头顶 (Head + 0.18m 头发余量)
+              const viewTop = headPos.y + 0.18;
+              // 下边界：腰部 (Hips + 0.15m 或者是 Hips 和 Head 的某个黄金分割点)
+              // 这样能保证切在腰部，而不是胯部
+              const viewBottom = hipsPos.y + 0.15;
+
+              // 计算视觉中心
+              const viewCenterY = (viewTop + viewBottom) / 2;
+              CAMERA_STATES.body.target.set(headPos.x, viewCenterY, headPos.z);
+
+              // 计算所需距离 (Z轴) 以填满垂直视场
+              // 公式: Distance = (Height / 2) / tan(FOV / 2)
+              const visibleHeight = viewTop - viewBottom;
+              const fovRad = (camera.fov * Math.PI) / 180; // 将角度转换为弧度
+              // 1.5 是安全系数 (padding)，避免头顶或腰部紧贴屏幕边缘
+              const fitDistance = (visibleHeight / 2) / Math.tan(fovRad / 2) * 1.5;
+
+              // 相机高度平视视觉中心，距离自动适配
+              CAMERA_STATES.body.pos.set(headPos.x, viewCenterY, headPos.z + fitDistance);
+
+              setCameraMode('head', true);
+
+              setTimeout(() => {
+            const el = document.getElementById('debug-console');
+            if(el) el.style.display = 'none';
+              }, 2000);
+          },
               (progress) => {},
               (error) => {
                   log("❌ VRM Load Fail: " + error.message);
