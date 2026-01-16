@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+      body {
+              margin: 0;
+              padding: 0;
+              overflow: hidden;
+              background: transparent;
+              width: 100vw;
+              height: 100vh;
+          }
+          canvas {
+              display: block;
+              width: 100% !important;
+              height: 100% !important;
+          }
+            /* 一个浮动在顶部的调试控制台 */
+            #debug-console {
+                position: absolute; top: 0; left: 0; width: 100%;
+                color: lime; background: rgba(0,0,0,0.5);
+                font-family: monospace; font-size: 12px;
+                pointer-events: none; z-index: 999;
+                white-space: pre-wrap; word-wrap: break-word;
+            }
+    </style>
+    <script type="importmap">
+      {
+          "imports": {
+              "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+              "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+              "@pixiv/three-vrm": "https://unpkg.com/@pixiv/three-vrm@3.0.0/lib/three-vrm.module.js"
+          }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="debug-console">Initializing...</div>
+    <script>
+      // === 屏幕日志工具 ===
+      function log(msg) {
+          const el = document.getElementById('debug-console');
+          el.innerText += '\n' + msg;
+          console.log(msg);
+      }
+      window.onerror = function(msg, url, line) {
+          log("❌ Error: " + msg + " (" + line + ")");
+      };
+      log("DOM Loaded.");
+    </script>
+    <script type="module">
+      import * as THREE from 'three';
+      import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+      import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
+
+      log("Three.js Modules Imported.");
+
+      try {
+          const scene = new THREE.Scene();
+          // 调试用：如果不确定模型是否加载，可以先加一个红色的方块
+          // const box = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.2), new THREE.MeshBasicMaterial({color: 0xff0000}));
+          // box.position.set(0, 1.5, 0);
+          // scene.add(box);
+
+          const camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 20.0);
+          const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+          renderer.setSize(window.innerWidth, window.innerHeight);
+          renderer.setPixelRatio(window.devicePixelRatio);
+          document.body.appendChild(renderer.domElement);
+
+          const light = new THREE.DirectionalLight(0xffffff, 1.0);
+          light.position.set(1.0, 1.0, 1.0).normalize();
+          scene.add(light);
+          scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+
+          // 摄像机默认位置
+          const CAMERA_STATES = {
+              head: { pos: new THREE.Vector3(0, 1.52, 0.6), target: new THREE.Vector3(0, 1.5, 0) },
+              body: { pos: new THREE.Vector3(0, 1.35, 1.6), target: new THREE.Vector3(0, 1.0, 0) }
+          };
+
+          let currentTargetPos = CAMERA_STATES.head.pos.clone();
+          let currentLookAt = CAMERA_STATES.head.target.clone();
+
+          // 设置初始相机
+          camera.position.copy(currentTargetPos);
+          camera.lookAt(currentLookAt);
+
+          log("Scene Initialized. Loading VRM...");
+
+          const loader = new GLTFLoader();
+          loader.register((parser) => new VRMLoaderPlugin(parser));
+
+          // 加载模型
+          loader.load('./avatar.vrm',
+              (gltf) => {
+                    log("✅ VRM Loaded Success!");
+                    const vrm = gltf.userData.vrm;
+                    vrm.scene.rotation.y = Math.PI;
+                    scene.add(vrm.scene);
+                    scene.add(new THREE.AxesHelper(5));
+                    window.currentVrm = vrm;
+
+                    // --- 核心修复：自动获取头部位置 ---
+                    // 获取 VRM 标准骨骼中的头部位置，如果不存在则默认为 1.5
+                    const headNode = vrm.humanoid.getRawBoneNode("head");
+                    const headHeight = headNode ? headNode.getWorldPosition(new THREE.Vector3()).y : 1.5;
+                    log("Head Height detected: " + headHeight.toFixed(2));
+
+                    // 重新定义摄像机状态，基于探测到的头部高度
+                    // 头部模式：相机稍微高一点点(headHeight + 0.02)，看向头部
+                    CAMERA_STATES.head.pos.set(0, headHeight + 0.02, 0.6);
+                    CAMERA_STATES.head.target.set(0, headHeight, 0);
+
+                    // 全身/半身模式：相机移远，高度降低到胸部位置
+                    CAMERA_STATES.body.pos.set(0, headHeight - 0.2, 1.8);
+                    CAMERA_STATES.body.target.set(0, headHeight - 0.4, 0);
+
+                    // 初始化位置
+                    setCameraMode('head', true);
+
+                    setTimeout(() => document.getElementById('debug-console').style.display = 'none', 3000);
+              },
+              (progress) => {
+                  if (progress.total > 0) {
+                      log("Loading: " + Math.round(progress.loaded / progress.total * 100) + "%");
+                  }
+              },
+              (error) => {
+                  log("❌ VRM Load Fail: " + error.message);
+                  console.error(error);
+              }
+          );
+
+          const clock = new THREE.Clock();
+          function animate() {
+              requestAnimationFrame(animate);
+              const delta = clock.getDelta();
+              if (window.currentVrm) window.currentVrm.update(delta);
+
+              // 相机插值
+              camera.position.lerp(currentTargetPos, 0.1);
+              // 简单的 lookAt 插值
+              if (!window.lookAtLerp) window.lookAtLerp = currentLookAt.clone();
+              window.lookAtLerp.lerp(currentLookAt, 0.1);
+              camera.lookAt(window.lookAtLerp);
+
+              renderer.render(scene, camera);
+          }
+          animate();
+
+          // 暴露接口
+          window.setCameraMode = (mode) => {
+              log("Mode: " + mode);
+              const state = CAMERA_STATES[mode];
+              if (state) {
+                  currentTargetPos.copy(state.pos);
+                  currentLookAt.copy(state.target);
+              }
+          };
+
+          window.updateSize = (w, h) => {
+              camera.aspect = w / h;
+              camera.updateProjectionMatrix();
+              renderer.setSize(w, h);
+          };
+
+      } catch (e) {
+          log("❌ Script Crash: " + e.message);
+      }
+    </script>
+  </body>
+</html>

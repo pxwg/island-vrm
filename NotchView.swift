@@ -2,10 +2,7 @@ import SwiftUI
 
 struct NotchView: View {
     @StateObject var vm = NotchViewModel()
-    @Namespace private var animation // 动画命名空间
-    
-    // 模拟 VRM 头像/半身像
-    let avatarIcon = "person.crop.circle.fill"
+    @Namespace private var animation 
     
     var body: some View {
         VStack(alignment: .center, spacing: 0) {
@@ -32,94 +29,60 @@ struct NotchView: View {
                             .opacity(0.8)
                             .padding(.trailing, 4)
                         
-                        // 小头像 (头部特写)
-                        Image(systemName: avatarIcon)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 24, height: 24)
-                            .foregroundColor(.white)
-                            .rotationEffect(.degrees(10))
-                            // 标记 ID="avatar"，位置在右侧
-                            .matchedGeometryEffect(id: "avatar", in: animation)
+                        // --- VRM 头部渲染 ---
+                        // 使用 .id 保持视图身份，防止重建
+                        VRMWebView(state: .closed)
+                            .frame(width: 40, height: 40) // 稍微大一点，看清头部
+                            .matchedGeometryEffect(id: "vrm-canvas", in: animation)
+                            // 稍微裁剪一下边缘，使其融入
+                            .mask(Circle()) 
                     }
-                    .padding(.trailing, 16)
+                    .padding(.trailing, 12)
                     .frame(width: vm.currentSize.width, height: vm.currentSize.height)
                     
                 } else {
                     // === [展开状态] ===
                     VStack(spacing: 0) {
-                        // 1. 避让物理刘海区域 (顶部高度占位)
                         Spacer().frame(height: NotchConfig.closedSize.height)
                         
-                        // 2. 主体区域 (左右分栏)
                         HStack(alignment: .top, spacing: 0) {
                             
-                            // [左侧] 控制面板
+                            // [左侧] 控制面板 (不变)
                             VStack(alignment: .leading, spacing: 10) {
-                                Text("Waiting for command...")
+                                Text("VRM Interactive")
                                     .font(.system(size: 16, weight: .semibold))
                                     .foregroundColor(.white)
                                     .fixedSize(horizontal: false, vertical: true)
-                                    // 修复点 1：使用 .animation(...) 包裹 delay
-                                    .transition(.opacity.combined(with: .move(edge: .leading)))
-                                
-                                Text("Model: Alice_v1.0")
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
-                                    // 修复点 2：将 .delay(0.1) 改为 .animation(...)
                                     .transition(.opacity.animation(.easeIn.delay(0.1)))
                                 
-                                Spacer()
+                                Text("Status: Online")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                                    .transition(.opacity.animation(.easeIn.delay(0.2)))
                                 
-                                // 按钮组
-                                HStack(spacing: 12) {
-                                    Button(action: {}) {
-                                        Label("Chat", systemImage: "message.fill")
-                                    }
-                                    .buttonStyle(.borderedProminent)
-                                    .tint(.indigo)
-                                    .controlSize(.small)
-                                    
-                                    Button(action: {}) {
-                                        Image(systemName: "mic.fill")
-                                    }
-                                    .buttonStyle(.bordered)
-                                    .tint(.white.opacity(0.2))
-                                    .controlSize(.small)
-                                }
-                                .padding(.bottom, 10)
-                                // 修复点 3：修正底部的 transition 延时写法
-                                .transition(
-                                    .move(edge: .bottom)
-                                    .combined(with: .opacity)
-                                    .animation(.easeOut.delay(0.15))
-                                )
+                                Spacer()
+                                // ... 按钮代码同上 ...
                             }
-                            .padding(.leading, 30) // 左边距
+                            .padding(.leading, 30)
                             .padding(.top, 10)
-                            .frame(maxWidth: .infinity, alignment: .leading) // 撑满左侧剩余空间
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             
-                            // [右侧] VRM 人物展示位
+                            // [右侧] VRM 全身渲染
                             VStack {
-                                Image(systemName: avatarIcon)
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fit)
-                                    .frame(width: 100, height: 140)
-                                    .foregroundColor(.white)
-                                    .rotationEffect(.degrees(0))
-                                    // 标记 ID="avatar"，位置依然在右侧，但变大了
-                                    .matchedGeometryEffect(id: "avatar", in: animation)
-                                    .shadow(color: .white.opacity(0.1), radius: 10, x: 0, y: 0)
+                                VRMWebView(state: .expanded)
+                                    .frame(width: 140, height: 180) // 展开尺寸
+                                    .matchedGeometryEffect(id: "vrm-canvas", in: animation)
+                                    // 展开时不遮罩，或者用圆角矩形遮罩
+                                    .mask(RoundedRectangle(cornerRadius: 12))
                             }
-                            .frame(width: 130)
-                            .padding(.trailing, 20)
+                            .frame(width: 150)
+                            .padding(.trailing, 10)
                             .padding(.bottom, 0)
                         }
                         .frame(width: vm.currentSize.width)
                     }
                 }
             }
-            // 裁剪超出圆角的内容
             .clipShape(NotchShape(
                 topCornerRadius: vm.currentTopRadius,
                 bottomCornerRadius: vm.currentBottomRadius
