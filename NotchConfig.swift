@@ -30,8 +30,7 @@ struct NotchConfig {
         }
         
         // 2. 定义我们要“加宽”多少来放头像
-        // 假设头像宽22 + 间距 + 呼吸灯，至少需要 40-50pt 的额外空间
-        let extraContentWidth: CGFloat = 80
+        let extraContentWidth: CGFloat = 90
         
         // 3. 计算最终宽度
         // 必须比物理刘海宽，内容才能露出来
