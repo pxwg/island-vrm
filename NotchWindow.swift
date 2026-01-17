@@ -3,40 +3,46 @@ import SwiftUI
 
 class NotchWindow: NSPanel {
     init() {
-        // 使用预定义的最大尺寸
+        // 1. 使用最大尺寸 (展开时的大小)
         let size = NotchConfig.windowSize
-
-        // 计算居中、吸顶的位置
-        // 注意：macOS 坐标系原点在屏幕左下角
-        // y = screenHeight - windowHeight，这样窗口顶部才会贴着屏幕顶部
         guard let screen = NSScreen.main else { fatalError("No screen found") }
         let screenRect = screen.frame
+        // 2. 计算位置：顶部居中
         let x = screenRect.midX - (size.width / 2)
         let y = screenRect.maxY - size.height
-
         let frame = NSRect(x: x, y: y, width: size.width, height: size.height)
-
         super.init(
             contentRect: frame,
-            styleMask: [.borderless, .nonactivatingPanel], // 无边框，不激活
+            // 关键 StyleMask：参考 boringNotchApp.swift 的 createBoringNotchWindow
+            styleMask: [.borderless, .nonactivatingPanel, .utilityWindow, .hudWindow],
             backing: .buffered,
             defer: false
         )
 
-        isOpaque = false
-        backgroundColor = .clear
-        hasShadow = false
-        level = .mainMenu + 3 // 确保覆盖在菜单栏之上
-        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+        // 3. 核心属性设置
+        isFloatingPanel = true // 让窗口浮动在其他窗口之上
+        isOpaque = false // 允许透明
+        backgroundColor = .clear // 背景完全透明
+        titleVisibility = .hidden
+        titlebarAppearsTransparent = true
         isMovable = false
+        hasShadow = false
 
-        // 关键：让鼠标点击穿透透明区域，但灵动岛本身可以接收事件
-        // 实际上因为我们窗口是固定大小的，SwiftUI 的 contentShape 会处理内部交互
-        // 这里设置为 false 允许 View 接收事件
-        ignoresMouseEvents = false
+        // 4. 层级设置
+        level = .mainMenu + 3
+
+        // 5. 集合行为 (Expose, 全屏支持等)
+        collectionBehavior = [
+            .canJoinAllSpaces,
+            .fullScreenAuxiliary,
+            .stationary,
+            .ignoresCycle,
+        ]
     }
 
+    // 确保窗口不会成为 Key Window (抢夺键盘焦点)
     override var canBecomeKey: Bool { false }
+    override var canBecomeMain: Bool { false }
 }
 
 // 在 AppDelegate 或 App 入口中使用
