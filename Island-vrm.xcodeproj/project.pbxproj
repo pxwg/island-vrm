@@ -10,9 +10,6 @@
 		169A1CD42F1B710B0019FC6F /* Island_vrmApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 169A1CD32F1B710B0019FC6F /* Island_vrmApp.swift */; };
 		169A1CD82F1B710C0019FC6F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 169A1CD72F1B710C0019FC6F /* Assets.xcassets */; };
 		169A1CDB2F1B710C0019FC6F /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 169A1CDA2F1B710C0019FC6F /* Preview Assets.xcassets */; };
-		169A1CE62F1B710C0019FC6F /* Island_vrmTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 169A1CE52F1B710C0019FC6F /* Island_vrmTests.swift */; };
-		169A1CF02F1B710C0019FC6F /* Island_vrmUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 169A1CEF2F1B710C0019FC6F /* Island_vrmUITests.swift */; };
-		169A1CF22F1B710C0019FC6F /* Island_vrmUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 169A1CF12F1B710C0019FC6F /* Island_vrmUITestsLaunchTests.swift */; };
 		169A1CFF2F1B71810019FC6F /* WebResources in Resources */ = {isa = PBXBuildFile; fileRef = 169A1CFE2F1B71810019FC6F /* WebResources */; };
 		169A1D002F1B71810019FC6F /* WebResources in Resources */ = {isa = PBXBuildFile; fileRef = 169A1CFE2F1B71810019FC6F /* WebResources */; };
 		169A1D012F1B71810019FC6F /* WebResources in Resources */ = {isa = PBXBuildFile; fileRef = 169A1CFE2F1B71810019FC6F /* WebResources */; };
@@ -48,10 +45,7 @@
 		169A1CDA2F1B710C0019FC6F /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		169A1CDC2F1B710C0019FC6F /* Island_vrm.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Island_vrm.entitlements; sourceTree = "<group>"; };
 		169A1CE12F1B710C0019FC6F /* Island-vrmTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Island-vrmTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
-		169A1CE52F1B710C0019FC6F /* Island_vrmTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Island_vrmTests.swift; sourceTree = "<group>"; };
 		169A1CEB2F1B710C0019FC6F /* Island-vrmUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Island-vrmUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
-		169A1CEF2F1B710C0019FC6F /* Island_vrmUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Island_vrmUITests.swift; sourceTree = "<group>"; };
-		169A1CF12F1B710C0019FC6F /* Island_vrmUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Island_vrmUITestsLaunchTests.swift; sourceTree = "<group>"; };
 		169A1CFE2F1B71810019FC6F /* WebResources */ = {isa = PBXFileReference; lastKnownFileType = folder; path = WebResources; sourceTree = "<group>"; };
 		16A95C102F1B740800ABEBD0 /* NotchWindow.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotchWindow.swift; sourceTree = "<group>"; };
 		16A95C112F1B740800ABEBD0 /* VRMWebView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VRMWebView.swift; sourceTree = "<group>"; };
@@ -90,8 +84,6 @@
 			isa = PBXGroup;
 			children = (
 				169A1CD22F1B710B0019FC6F /* Island-vrm */,
-				169A1CE42F1B710C0019FC6F /* Island-vrmTests */,
-				169A1CEE2F1B710C0019FC6F /* Island-vrmUITests */,
 				169A1CD12F1B710B0019FC6F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -130,23 +122,6 @@
 				169A1CDA2F1B710C0019FC6F /* Preview Assets.xcassets */,
 			);
 			path = "Preview Content";
-			sourceTree = "<group>";
-		};
-		169A1CE42F1B710C0019FC6F /* Island-vrmTests */ = {
-			isa = PBXGroup;
-			children = (
-				169A1CE52F1B710C0019FC6F /* Island_vrmTests.swift */,
-			);
-			path = "Island-vrmTests";
-			sourceTree = "<group>";
-		};
-		169A1CEE2F1B710C0019FC6F /* Island-vrmUITests */ = {
-			isa = PBXGroup;
-			children = (
-				169A1CEF2F1B710C0019FC6F /* Island_vrmUITests.swift */,
-				169A1CF12F1B710C0019FC6F /* Island_vrmUITestsLaunchTests.swift */,
-			);
-			path = "Island-vrmUITests";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -296,7 +271,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				169A1CE62F1B710C0019FC6F /* Island_vrmTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -304,8 +278,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				169A1CF02F1B710C0019FC6F /* Island_vrmUITests.swift in Sources */,
-				169A1CF22F1B710C0019FC6F /* Island_vrmUITestsLaunchTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
