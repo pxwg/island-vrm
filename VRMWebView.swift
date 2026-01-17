@@ -18,11 +18,14 @@ class SharedWebViewHelper: NSObject, WKNavigationDelegate, WKUIDelegate {
         webView.navigationDelegate = self
         webView.uiDelegate = self
         var resourceBundle: Bundle {
-            #if SWIFT_PACKAGE
-                return Bundle.module
-            #else
-                return Bundle.main
-            #endif
+            let bundleName = "island"
+            if let bundleURL = Bundle.main.url(forResource: bundleName, withExtension: "bundle"),
+               let bundle = Bundle(url: bundleURL)
+            {
+                return bundle
+            }
+
+            return Bundle.main
         }
 
         if
