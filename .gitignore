@@ -1,0 +1,17 @@
+.DS_Store
+
+*.xcodeproj/project.xcworkspace/xcuserdata
+*.xcodeproj/xcuserdata/
+DerivedData/
+
+.build/
+.swiftpm/
+.build_output/
+
+.nvim/
+
+*.moved-aside
+*.xccheckout
+*.xcscmblueprint
+
+*.vrm
