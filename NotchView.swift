@@ -30,7 +30,7 @@ struct NotchView: View {
                             VRMWebView(state: .closed)
                                 .frame(width: 40, height: 40)
                                 .matchedGeometryEffect(id: "vrm-canvas", in: animation)
-                                .mask(Circle())
+                            // .mask(Circle())
                         }
                         .padding(.trailing, 12)
                         .frame(width: vm.currentSize.width, height: vm.currentSize.height)
@@ -89,7 +89,7 @@ struct NotchView: View {
                                 // [右侧] VRM 全身渲染
                                 VStack {
                                     VRMWebView(state: .expanded)
-                                        .frame(width: 140, height: 180)
+                                        .frame(width: vm.currentSize.width, height: vm.currentSize.height)
                                         .matchedGeometryEffect(id: "vrm-canvas", in: animation)
                                         .mask(RoundedRectangle(cornerRadius: 12))
                                 }
