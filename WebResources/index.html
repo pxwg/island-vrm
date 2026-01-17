@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-      body { margin: 0; padding: 0; overflow: hidden; background: transparent; width: 100vw; height: 100vh; }
-      canvas { display: block; width: 100% !important; height: 100% !important; touch-action: none; }
+      body { margin: 0; overflow: hidden; background: transparent; }
+      canvas { width: 100% !important; height: 100% !important; display: block; }
     </style>
     <script type="importmap">
       {
@@ -19,180 +19,189 @@
     </script>
   </head>
   <body>
-    <script>
-      function log(msg) {
-          const el = document.getElementById('debug-console');
-          if(el) el.innerText += '\n' + msg;
-          console.log(msg);
-      }
-      window.onerror = function(msg, url, line) { log("❌ Error: " + msg + " (" + line + ")"); };
-      log("DOM Loaded.");
-    </script>
     <script type="module">
       import * as THREE from 'three';
       import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-      import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
+      import { VRMLoaderPlugin } from '@pixiv/three-vrm';
       import { VRMAnimationLoaderPlugin, createVRMAnimationClip } from '@pixiv/three-vrm-animation';
 
-      log("Three.js Modules Imported.");
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 20.0);
 
-      try {
-          const scene = new THREE.Scene();
-          // FOV 40 适合人像
-          const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 20.0);
-          const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-          renderer.setSize(window.innerWidth, window.innerHeight);
-          renderer.setPixelRatio(window.devicePixelRatio);
-          document.body.appendChild(renderer.domElement);
+      const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(window.devicePixelRatio);
+      document.body.appendChild(renderer.domElement);
 
-          const light = new THREE.DirectionalLight(0xffffff, 1.2);
-          light.position.set(0.5, 1.0, 1.0).normalize();
-          scene.add(light);
-          scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+      // 光照
+      const light = new THREE.DirectionalLight(0xffffff, 1.2);
+      light.position.set(1.0, 1.0, 1.0).normalize();
+      scene.add(light);
+      scene.add(new THREE.AmbientLight(0xffffff, 0.8));
 
-          // === 摄像机控制变量 ===
-          let activeMode = 'head'; // 当前模式
-          let bodyFitDistance = 1.5; // Body 模式下计算出的最佳距离
+      // 状态变量
+      // activeMode: 'head' 代表折叠(灵动岛)状态, 'body' 代表展开状态
+      let activeMode = 'head';
+      let currentVrm = null;
+      let currentMixer = null;
 
-          // 目标位置 (Lerp 的终点)
-          let targetCamPos = new THREE.Vector3(0, 1.5, 1.0);
-          let targetLookAt = new THREE.Vector3(0, 1.5, 0);
+      // 摄像机目标
+      let targetCamPos = new THREE.Vector3(0, 1.4, 0.6);
+      let targetLookAt = new THREE.Vector3(0, 1.4, 0);
+      const currentLookAt = new THREE.Vector3(0, 1.4, 0);
 
-          // 当前实际视点 (用于平滑 LookAt)
-          let currentLookAt = new THREE.Vector3(0, 1.5, 0);
+      // 交互变量
+      let mouseX = 0;
+      let mouseY = 0;
+      let currentYaw = 0;
+      let currentPitch = 0;
+      let bodyFitDistance = 1.5;
 
-          let currentMixer = null;
+      const loader = new GLTFLoader();
+      loader.register((parser) => new VRMLoaderPlugin(parser));
+      loader.register((parser) => new VRMAnimationLoaderPlugin(parser));
 
-          // === Loader ===
-          const loader = new GLTFLoader();
-          loader.register((parser) => new VRMLoaderPlugin(parser));
-          loader.register((parser) => new VRMAnimationLoaderPlugin(parser));
+      loader.load('./avatar.vrm', (gltf) => {
+          const vrm = gltf.userData.vrm;
+          vrm.scene.rotation.y = Math.PI; // 模型转身面向镜头
+          scene.add(vrm.scene);
+          currentVrm = vrm;
 
-          loader.load('./avatar.vrm', (gltf) => {
-              const vrm = gltf.userData.vrm;
-              vrm.scene.rotation.y = Math.PI;
-              scene.add(vrm.scene);
-              window.currentVrm = vrm;
-              log("✅ VRM Loaded.");
+          // 开启 LookAt 辅助眼球转动
+          const lookAtTarget = new THREE.Object3D();
+          scene.add(lookAtTarget);
+          vrm.lookAt.target = lookAtTarget;
 
-              // 预计算 Body 模式的最佳距离 (只计算一次距离参数，位置实时跟)
-              calculateBodyFitDistance(vrm);
+          calculateBodyFitDistance(vrm);
 
-              // 加载动画
-              loadIdleAnimation(vrm);
+          loader.load('./idle.vrma', (gltfAnim) => {
+              const clips = gltfAnim.userData.vrmAnimations;
+              if (clips && clips[0]) {
+                  currentMixer = new THREE.AnimationMixer(vrm.scene);
+                  const clip = createVRMAnimationClip(clips[0], vrm);
+                  currentMixer.clipAction(clip).play();
+              }
+          });
+      });
 
-              // 隐藏 Debug UI
-              setTimeout(() => {
-                  const el = document.getElementById('debug-console');
-                  if(el) el.style.display = 'none';
-              }, 2000);
+      function calculateBodyFitDistance(vrm) {
+          const headNode = vrm.humanoid.getRawBoneNode("head");
+          const hipsNode = vrm.humanoid.getRawBoneNode("hips");
+          if (!headNode || !hipsNode) return;
 
-          }, undefined, (err) => log("❌ VRM Error: " + err.message));
+          vrm.scene.updateMatrixWorld(true);
+          const headY = headNode.getWorldPosition(new THREE.Vector3()).y;
+          const hipsY = hipsNode.getWorldPosition(new THREE.Vector3()).y;
+          const visibleHeight = (headY + 0.18) - (hipsY + 0.15);
+          const fovRad = (camera.fov * Math.PI) / 180;
+          bodyFitDistance = (visibleHeight / 2) / Math.tan(fovRad / 2) * 1.5;
+      }
 
-          function loadIdleAnimation(vrm) {
-              loader.load('./idle.vrma', (gltf) => {
-                  const vrmAnimations = gltf.userData.vrmAnimations;
-                  if (vrmAnimations && vrmAnimations[0]) {
-                      currentMixer = new THREE.AnimationMixer(vrm.scene);
-                      const clip = createVRMAnimationClip(vrmAnimations[0], vrm);
-                      currentMixer.clipAction(clip).play();
-                  }
-              });
-          }
+      const clock = new THREE.Clock();
 
-          function calculateBodyFitDistance(vrm) {
-              const headNode = vrm.humanoid.getRawBoneNode("head");
-              const hipsNode = vrm.humanoid.getRawBoneNode("hips");
-              if (!headNode || !hipsNode) return;
+      function animate() {
+          requestAnimationFrame(animate);
+          const delta = clock.getDelta();
 
-              // 临时获取静态位置计算高度差
-              const headY = headNode.getWorldPosition(new THREE.Vector3()).y;
-              const hipsY = hipsNode.getWorldPosition(new THREE.Vector3()).y;
+          if (currentVrm) {
+              // 1. 基础动画更新
+              if (currentMixer) currentMixer.update(delta);
+              currentVrm.update(delta);
 
-              const viewTop = headY + 0.18;
-              const viewBottom = hipsY + 0.15;
-              const visibleHeight = viewTop - viewBottom;
+              // 2. 头部跟随鼠标 (Fix: 折叠状态下减小幅度)
+              const sensitivity = 0.002;
+              const maxYaw = THREE.MathUtils.degToRad(50);
+              const maxPitch = THREE.MathUtils.degToRad(30);
 
-              // 公式反推距离
-              const fovRad = (camera.fov * Math.PI) / 180;
-              bodyFitDistance = (visibleHeight / 2) / Math.tan(fovRad / 2) * 1.5;
-              log("Calculated Body Dist: " + bodyFitDistance.toFixed(2));
-          }
+              // [关键修改]：判断当前模式
+              // 如果是 'head' (折叠/灵动岛模式)，将追踪强度降低到 25%
+              // 这样即使鼠标在屏幕最下方，头也只会微微向下，不会变成“埋头”
+              const isClosedMode = (activeMode === 'head');
+              const trackingIntensity = isClosedMode ? 0.25 : 1.0;
 
-          // === 动画循环 (核心修改) ===
-          const clock = new THREE.Clock();
-          let blinkTimer = 0;
-          let nextBlinkTime = 2;
-          let isBlinking = false;
+              // 计算目标角度（应用强度系数）
+              const targetYaw = THREE.MathUtils.clamp(
+                  mouseX * sensitivity * trackingIntensity,
+                  -maxYaw * trackingIntensity,
+                  maxYaw * trackingIntensity
+              );
+              const targetPitch = THREE.MathUtils.clamp(
+                  mouseY * sensitivity * trackingIntensity,
+                  -maxPitch * trackingIntensity,
+                  maxPitch * trackingIntensity
+              );
 
-          function animate() {
-              requestAnimationFrame(animate);
-              const delta = clock.getDelta();
+              currentYaw = THREE.MathUtils.lerp(currentYaw, targetYaw, 0.1);
+              currentPitch = THREE.MathUtils.lerp(currentPitch, targetPitch, 0.1);
 
-              if (window.currentVrm) {
-                  const vrm = window.currentVrm;
+              const head = currentVrm.humanoid.getRawBoneNode('head');
+              const neck = currentVrm.humanoid.getRawBoneNode('neck');
+              const spine = currentVrm.humanoid.getRawBoneNode('upperChest') || currentVrm.humanoid.getRawBoneNode('chest');
 
-                  // 1. 更新动画 (人物动起来)
-                  if (currentMixer) currentMixer.update(delta);
-                  // if (vrm.expressionManager) updateBlink(vrm, delta);
-                  vrm.update(delta);
-
-                  // 2. 实时获取骨骼位置 (跟随的核心)
-                  const headNode = vrm.humanoid.getRawBoneNode("head");
-                  const hipsNode = vrm.humanoid.getRawBoneNode("hips");
-
-                  if (headNode) {
-                      const headPos = headNode.getWorldPosition(new THREE.Vector3());
-
-                      // 如果没有 hips，用 head 下方估算
-                      let hipsPos = new THREE.Vector3(headPos.x, headPos.y * 0.55, headPos.z);
-                      if (hipsNode) hipsPos = hipsNode.getWorldPosition(new THREE.Vector3());
-
-                      // === 动态计算目标点 ===
-                      if (activeMode === 'head') {
-                          // [HEAD MODE] 紧跟头部
-                          // 目标：看着脸中心 (head + 0.05)
-                          targetLookAt.set(headPos.x, headPos.y + 0.05, headPos.z);
-                          // 相机：在脸前方 0.55 米
-                          targetCamPos.set(headPos.x, headPos.y + 0.05, headPos.z + 0.55);
-
-                      } else {
-                          // [BODY MODE] 跟随躯干中心
-                          const viewCenterY = (headPos.y + 0.18 + hipsPos.y + 0.15) / 2; // 动态计算中心
-
-                          targetLookAt.set(headPos.x, viewCenterY, headPos.z);
-                          // 相机：保持预计算的构图距离
-                          targetCamPos.set(headPos.x, viewCenterY, headPos.z + bodyFitDistance);
-                      }
-                  }
+              if (spine) {
+                  spine.rotation.y += currentYaw * 0.2;
+                  spine.rotation.x += currentPitch * 0.2;
+              }
+              if (neck) {
+                  neck.rotation.y += currentYaw * 0.3;
+                  neck.rotation.x += currentPitch * 0.3;
+              }
+              if (head) {
+                  head.rotation.y += currentYaw * 0.5;
+                  head.rotation.x += currentPitch * 0.5;
               }
 
-              // 3. 摄像机平滑阻尼 (让跟随像云台一样丝滑)
-              // 调小 damping (如 0.05) 会更延迟/平滑，调大 (如 0.2) 会更跟手
-              const damping = 0.05;
+              // 3. 摄像机跟随
+              currentVrm.scene.updateMatrixWorld();
 
-              camera.position.lerp(targetCamPos, damping);
-              currentLookAt.lerp(targetLookAt, damping);
-              camera.lookAt(currentLookAt);
+              const headPos = head.getWorldPosition(new THREE.Vector3());
+              let hipsPos = new THREE.Vector3(headPos.x, headPos.y * 0.55, headPos.z);
+              const hipsNode = currentVrm.humanoid.getRawBoneNode("hips");
+              if (hipsNode) hipsPos = hipsNode.getWorldPosition(new THREE.Vector3());
 
-              renderer.render(scene, camera);
+              if (activeMode === 'head') {
+                   // [Head Mode] 紧跟头部 (折叠状态)
+                   targetLookAt.set(headPos.x, headPos.y + 0.05, headPos.z);
+                   targetCamPos.set(headPos.x, headPos.y + 0.05, headPos.z + 0.55);
+              } else {
+                   // [Body Mode] 全身/半身 (展开状态)
+                   const viewCenterY = (headPos.y + 0.18 + hipsPos.y + 0.15) / 2;
+                   targetLookAt.set(headPos.x, viewCenterY, headPos.z);
+                   targetCamPos.set(headPos.x, viewCenterY, headPos.z + bodyFitDistance);
+              }
+
+              // 4. LookAt 辅助体
+              if (currentVrm.lookAt && currentVrm.lookAt.target) {
+                   currentVrm.lookAt.target.position.set(
+                        headPos.x + Math.sin(currentYaw),
+                        headPos.y + Math.tan(currentPitch),
+                        headPos.z + Math.cos(currentYaw)
+                   );
+              }
           }
-          animate();
 
-          // === 对外接口 ===
-          window.setCameraMode = (mode) => {
-              log("Mode switch: " + mode);
-              activeMode = mode;
-              // 切换模式时不强制瞬移，利用 animate 中的 lerp 实现平滑过渡
-          };
+          // 摄像机平滑
+          camera.position.lerp(targetCamPos, 0.05);
+          currentLookAt.lerp(targetLookAt, 0.05);
+          camera.lookAt(currentLookAt);
 
-          window.updateSize = (w, h) => {
-              camera.aspect = w / h;
-              camera.updateProjectionMatrix();
-              renderer.setSize(w, h);
-          };
+          renderer.render(scene, camera);
+      }
+      animate();
 
-      } catch (e) { log("❌ Crash: " + e.message); }
+      window.updateMouseParams = (dx, dy) => {
+          mouseX = dx;
+          mouseY = dy;
+      };
+
+      window.setCameraMode = (mode) => { activeMode = mode; };
+
+      window.updateSize = (w, h) => {
+          camera.aspect = w / h;
+          camera.updateProjectionMatrix();
+          renderer.setSize(w, h);
+          renderer.setPixelRatio(window.devicePixelRatio);
+      };
     </script>
   </body>
 </html>
