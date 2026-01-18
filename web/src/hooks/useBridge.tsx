@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 
-// 定义全局 Window 接口，匹配 Swift 的调用
 declare global {
   interface Window {
     updateMouseParams?: (dx: number, dy: number) => void;
@@ -10,14 +9,12 @@ declare global {
 }
 
 export function useNativeBridge() {
-  // 1. 鼠标位置使用 Ref (高性能，不触发重渲染)
   const mouseRef = useRef({ x: 0, y: 0 })
-  
-  // 2. 模式状态使用 State (低频切换，需要触发动画)
   const [cameraMode, setCameraModeState] = useState<'head' | 'body'>('head')
+  // [新增] 存储 Swift 传来的真实窗口尺寸
+  const [windowSize, setWindowSize] = useState<{ width: number, height: number } | null>(null)
 
   useEffect(() => {
-    // 挂载函数给 Swift 调用
     window.updateMouseParams = (dx, dy) => {
       mouseRef.current = { x: dx, y: dy }
     }
@@ -28,12 +25,12 @@ export function useNativeBridge() {
       }
     }
     
-    // 尺寸更新主要由 CSS/ResizeObserver 自动处理，但也保留接口
+    // [修改] 捕获尺寸并更新 State
     window.updateSize = (w, h) => {
-      console.log(`Resized to ${w}x${h}`)
+      console.log(`Swift Resized to ${w}x${h}`)
+      setWindowSize({ width: w, height: h })
     }
 
-    // 清理
     return () => {
       delete window.updateMouseParams
       delete window.setCameraMode
@@ -41,5 +38,5 @@ export function useNativeBridge() {
     }
   }, [])
 
-  return { mouseRef, cameraMode }
+  return { mouseRef, cameraMode, windowSize }
 }
