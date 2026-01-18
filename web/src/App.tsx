@@ -1,4 +1,4 @@
-import { Suspense, useState, useRef, useMemo } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { Avatar } from './components/Avatar'
 import { CameraRig } from './components/CameraRig'
@@ -9,14 +9,14 @@ import { DEFAULT_CONFIG } from './utils/layout'
 import type { ViewportConfig } from './utils/layout'
 import * as THREE from 'three'
 
-function Loader() {
-  return (
-    <mesh>
-      <boxGeometry args={[0.5, 0.5, 0.5]} />
-      <meshStandardMaterial color="red" wireframe />
-    </mesh>
-  )
-}
+// function Loader() {
+//   return (
+//     <mesh>
+//       <boxGeometry args={[0.5, 0.5, 0.5]} />
+//       <meshStandardMaterial color="red" wireframe />
+//     </mesh>
+//   )
+// }
 
 function App() {
   // 1. 获取 Swift 传来的状态
@@ -91,10 +91,10 @@ function App() {
         <directionalLight position={[1, 1, 1]} intensity={1.2} />
         <ambientLight intensity={0.8} />
 
-        <Suspense fallback={<Loader />}>
-          <Avatar mouseRef={mouseRef} mode={activeMode} />
-          <CameraRig ref={orbitRef} mode={activeMode} debug={IS_DEBUG_MODE} />
-        </Suspense>
+        {/* <Suspense fallback={<Loader />}> */}
+        <Avatar mouseRef={mouseRef} mode={activeMode} />
+        <CameraRig ref={orbitRef} mode={activeMode} debug={IS_DEBUG_MODE} />
+        {/* </Suspense> */}
       </Canvas>
     </div>
   )
