@@ -1,6 +1,6 @@
 // 默认配置 (仅当在浏览器里没有 Swift 信号时作为保底)
 export const DEFAULT_CONFIG = {
-  head: { width: 40, height: 40, radius: '50%', name: 'Default Head' },
+  head: { width: 30, height: 30, radius: '8px', name: 'Default Head' },
   body: { width: 150, height: 158, radius: '12px', name: 'Default Body' },
 };
 

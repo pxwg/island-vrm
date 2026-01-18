@@ -11,5 +11,6 @@ build/
 *.bak1
 *.vrma
 *.out
+./web/public/camera.json
 
 *.DS_Store

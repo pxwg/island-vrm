@@ -96,11 +96,11 @@ struct NotchView: View {
                     // 独立于 if/else 之外，通过修改器动态调整位置和大小
                     VRMWebView(state: vm.state)
                         .frame(
-                            width: vm.state == .closed ? 40 : 150,
-                            height: vm.state == .closed ? 40 : (NotchConfig.openSize.height - NotchConfig.closedSize.height)
+                            width: vm.state == .closed ? NotchConfig.VRM.headSize.width : NotchConfig.VRM.bodyWidth,
+                            height: vm.state == .closed ? NotchConfig.VRM.headSize.height : (NotchConfig.openSize.height - NotchConfig.closedSize.height)
                         )
-                        .mask(RoundedRectangle(cornerRadius: vm.state == .closed ? 20 : 12))
-                        .padding(.top, vm.state == .closed ? -4 : NotchConfig.closedSize.height)
+                        .mask(RoundedRectangle(cornerRadius: vm.state == .closed ? NotchConfig.VRM.headCornerRadius : NotchConfig.VRM.bodyCornerRadius))
+                        .padding(.top, vm.state == .closed ? NotchConfig.VRM.headTopPadding : NotchConfig.closedSize.height)
                         .padding(.trailing, vm.state == .closed ? 12 : 10)
                         .frame(maxWidth: vm.currentSize.width, maxHeight: vm.currentSize.height, alignment: .topTrailing)
                 }

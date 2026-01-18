@@ -16,6 +16,17 @@ enum NotchConfig {
         opened: (top: 19.0, bottom: 24.0),
         closed: (top: 6.0, bottom: 14.0)
     )
+    enum VRM {
+        // Head 模式 (灵动岛收起时)
+        static let headSize = CGSize(width: 30, height: 30)
+        static let headCornerRadius: CGFloat = 8
+
+        // Body 模式 (展开时)
+        static let bodyWidth: CGFloat = 150
+        static let bodyCornerRadius: CGFloat = 12
+
+        static let headTopPadding: CGFloat = 0
+    }
 
     // --- 核心修改在这里 ---
     static var closedSize: CGSize {
