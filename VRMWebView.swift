@@ -19,16 +19,16 @@ class SharedWebViewHelper: NSObject, WKNavigationDelegate, WKUIDelegate {
         webView.navigationDelegate = self
         webView.uiDelegate = self
 
-        let DEBUG_MODE = true
-
-        if DEBUG_MODE, let url = URL(string: "http://127.0.0.1:5500") {
-            webView.load(URLRequest(url: url))
-        } else {
+        #if DEBUG_SERVER
+            if let url = URL(string: "http://127.0.0.1:5500") {
+                webView.load(URLRequest(url: url))
+            }
+        #else
             let bundle = Bundle(url: Bundle.main.url(forResource: "island", withExtension: "bundle") ?? URL(fileURLWithPath: "")) ?? Bundle.main
             if let url = bundle.url(forResource: "index", withExtension: "html", subdirectory: "WebResources") {
                 webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
             }
-        }
+        #endif
 
         startMouseTracking()
     }

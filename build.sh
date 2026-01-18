@@ -1,11 +1,33 @@
 #!/bin/bash
 
-# --- 配置 ---
+# --- 默认配置 ---
 APP_NAME="BoringNotchMVP"
 BUILD_DIR="./build"
 APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
 EXECUTABLE="$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 RESOURCES_DIR="$APP_BUNDLE/Contents/Resources"
+
+# 默认关闭调试模式
+USE_DEBUG_SERVER=false
+
+# --- 解析命令行参数 ---
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        --debug)
+            if [ "$2" == "true" ]; then
+                USE_DEBUG_SERVER=true
+            else
+                USE_DEBUG_SERVER=false
+            fi
+            shift # 移除 --debug
+            shift # 移除 true/false
+            ;;
+        *)
+            echo "未知参数: $1"
+            exit 1
+            ;;
+    esac
+done
 
 # --- 1. 清理旧构建 ---
 echo "🧹 Cleaning up..."
@@ -15,7 +37,17 @@ mkdir -p "$RESOURCES_DIR"
 
 # --- 2. 编译 Swift 代码 ---
 echo "🚀 Compiling Swift sources..."
-# 注意：这里增加了 VRMWebView.swift
+
+# 根据解析出的变量构建编译器参数
+SWIFT_FLAGS="-O"
+if [ "$USE_DEBUG_SERVER" = true ]; then
+    echo "🚧 Building with DEBUG_SERVER mode enabled..."
+    SWIFT_FLAGS="$SWIFT_FLAGS -D DEBUG_SERVER"
+else
+    echo "📦 Building with RELEASE mode (local assets)..."
+fi
+
+# 执行编译
 swiftc \
     NotchShape.swift \
     NotchConfig.swift \
@@ -27,7 +59,7 @@ swiftc \
     -o "$EXECUTABLE" \
     -target arm64-apple-macos14.0 \
     -sdk $(xcrun --show-sdk-path) \
-    -O
+    $SWIFT_FLAGS
 
 # 检查编译是否成功
 if [ $? -ne 0 ]; then
