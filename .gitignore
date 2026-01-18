@@ -6,6 +6,9 @@ build/
 .swiftpm/
 .build/
 *.vrm
+*.bak
+*.bak1
 *.vrma
+*.out
 
 *.DS_Store
