@@ -1,7 +1,11 @@
 import SwiftUI
 
 struct NotchView: View {
-    @StateObject var vm = NotchViewModel()
+    @StateObject var vm: NotchViewModel
+    // 允许外部传入 vm
+    init(vm: NotchViewModel = NotchViewModel()) {
+        _vm = StateObject(wrappedValue: vm)
+    }
 
     var body: some View {
         // 1. 全局容器：吸顶
@@ -31,7 +35,7 @@ struct NotchView: View {
                         )
                     )
                     .padding(.top, vm.state == .closed ? (NotchConfig.closedSize.height - NotchConfig.VRM.headSize.height) / 2 : NotchConfig.closedSize.height)
-                    .padding(.trailing, vm.state == .closed ? 12 : 10)
+                    .padding(.trailing, vm.state == .closed ? 12 : 24)
                     .frame(
                         width: vm.currentSize.width,
                         height: vm.currentSize.height,
@@ -161,4 +165,19 @@ struct ExpandedContent: View {
         }
         .padding(.top, NotchConfig.closedSize.height)
     }
+}
+
+// [新增] Xcode 15+ 专用预览宏
+#Preview("展开状态") {
+    // 这里传入 isPreview: true，避免启动服务器
+    NotchView(vm: NotchViewModel(isPreview: true))
+        .frame(width: 800, height: 400) // 给画布一个大背景
+        .background(Color.black.opacity(0.1)) // 稍微给点背景色看清轮廓
+}
+
+#Preview("收起状态") {
+    let vm = NotchViewModel(isPreview: true)
+    vm.state = .closed
+    return NotchView(vm: vm)
+        .frame(width: 500, height: 200)
 }

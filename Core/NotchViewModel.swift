@@ -35,8 +35,16 @@ class NotchViewModel: ObservableObject {
         .easeInOut(duration: 0.5)
     }
 
-    init() {
-        setupServer()
+    // [修改] init 增加 isPreview 参数，默认 false
+    init(isPreview: Bool = false) {
+        // 只有不是预览模式时，才启动服务器
+        if !isPreview {
+            setupServer()
+        } else {
+            // [新增] 预览模式下的假数据
+            print("Preview Mode: Server skipped")
+            chatContent = "预览测试：这是一段模拟的对话内容..."
+        }
     }
 
     private func setupServer() {

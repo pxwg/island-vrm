@@ -46,10 +46,10 @@ class NotchWindow: NSPanel {
 }
 
 // 在 AppDelegate 或 App 入口中使用
-class AppDelegate: NSObject, NSApplicationDelegate {
+public class AppDelegate: NSObject, NSApplicationDelegate {
     var window: NotchWindow!
 
-    func applicationDidFinishLaunching(_: Notification) {
+    public func applicationDidFinishLaunching(_: Notification) {
         window = NotchWindow()
         let contentView = NotchView()
 

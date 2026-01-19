@@ -83,18 +83,21 @@ class SharedWebViewHelper: NSObject, WKNavigationDelegate, WKUIDelegate {
 struct VRMWebView: NSViewRepresentable {
     var state: NotchViewModel.State
 
-    func makeNSView(context _: Context) -> WKWebView {
+    func makeNSView(context _: Context) -> NSView {
+        // [新增] 极为关键：判断是否在预览模式
+        if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
+            let mockView = NSView()
+            mockView.wantsLayer = true
+            mockView.layer?.backgroundColor = NSColor.systemBlue.withAlphaComponent(0.3).cgColor
+            return mockView
+        }
         return SharedWebViewHelper.shared.webView
     }
 
-    func updateNSView(_ nsView: WKWebView, context _: Context) {
-        SharedWebViewHelper.shared.setMode(state == .closed ? "head" : "body")
-
-        DispatchQueue.main.async {
-            let size = nsView.frame.size
-            if size.width > 1, size.height > 1 {
-                nsView.evaluateJavaScript("if(window.updateSize) window.updateSize(\(size.width), \(size.height))", completionHandler: nil)
-            }
+    func updateNSView(_ nsView: NSView, context _: Context) {
+        // [新增] 只有是 WKWebView 才执行逻辑，防止崩溃
+        if let _ = nsView as? WKWebView {
+            SharedWebViewHelper.shared.setMode(state == .closed ? "head" : "body")
         }
     }
 }

@@ -1,0 +1,36 @@
+name: IslandVRMMVP
+options:
+  bundleIdPrefix: com.pxwg
+  # [兼容性修复] 强制使用通用格式
+  objectVersion: 50
+  deploymentTarget:
+    macOS: "14.0"
+  # [自动修复 Bug] 生成后自动修正版本号，防止 "Future file format" 报错
+  postGenCommand: sed -i '' 's/objectVersion = 77;/objectVersion = 50;/g' IslandVRMMVP.xcodeproj/project.pbxproj
+targets:
+  IslandVRMMVP:
+    type: application # [关键] 这里明确指定为 App，预览才能工作！
+    platform: macOS
+    sources:
+      # 使用具体的源文件列表，避免扫描系统目录报错
+      - path: IslandApp.swift # 你的新入口文件
+      - path: APIModels.swift
+      - path: LocalServer.swift
+      - path: NotchShape.swift
+      - path: NotchConfig.swift
+      - path: NotchViewModel.swift
+      - path: NotchView.swift
+      - path: NotchWindow.swift
+      - path: VRMWebView.swift
+      - path: WebResources
+        type: folder
+    settings:
+      base:
+        PRODUCT_NAME: "IslandVRMMVP"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_LSUIElement: true # 隐藏 Dock 图标
+        INFOPLIST_KEY_NSHighResolutionCapable: true
+        INFOPLIST_KEY_NSAppTransportSecurity: 
+          NSAllowsArbitraryLoads: true
+        ENABLE_PREVIEWS: "YES"
+        SWIFT_VERSION: "5.0"
