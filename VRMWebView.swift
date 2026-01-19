@@ -37,6 +37,25 @@ class SharedWebViewHelper: NSObject, WKNavigationDelegate, WKUIDelegate {
         webView.evaluateJavaScript("window.setCameraMode('\(mode)')", completionHandler: nil)
     }
 
+    // [新增] 发送演绎指令
+    func triggerPerformance(_ perf: Performance) {
+        do {
+            let data = try JSONEncoder().encode(perf)
+            if let jsonString = String(data: data, encoding: .utf8) {
+                let js = "if(window.triggerPerformance) window.triggerPerformance(\(jsonString))"
+                webView.evaluateJavaScript(js, completionHandler: nil)
+            }
+        } catch {
+            print("Failed to encode performance: \(error)")
+        }
+    }
+
+    // [新增] 发送状态指令
+    func setAgentState(_ state: String) {
+        let js = "if(window.setAgentState) window.setAgentState('\(state)')"
+        webView.evaluateJavaScript(js, completionHandler: nil)
+    }
+
     // --- 鼠标追踪逻辑 ---
     private func startMouseTracking() {
         mouseTrackingTimer = Timer.scheduledTimer(withTimeInterval: 0.033, repeats: true) { [weak self] _ in
@@ -54,7 +73,6 @@ class SharedWebViewHelper: NSObject, WKNavigationDelegate, WKUIDelegate {
         let dx = mouseLoc.x - centerX
         let dy = mouseLoc.y - centerY
 
-        // 只有当 webView 还在视图层级时才发送
         if webView.window != nil {
             let js = "if(window.updateMouseParams) window.updateMouseParams(\(dx), \(dy))"
             webView.evaluateJavaScript(js, completionHandler: nil)

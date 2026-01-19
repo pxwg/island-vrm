@@ -4,120 +4,161 @@ struct NotchView: View {
     @StateObject var vm = NotchViewModel()
 
     var body: some View {
-        // [关键修复] 1. 最外层容器：必须填满整个透明 Window，并强制顶部对齐
-        // 这样内容才会始终“吸”在屏幕顶部，而不是浮在 Window 中间
+        // 1. 全局容器：吸顶
         ZStack(alignment: .top) {
-            // 2. 灵动岛动态容器：尺寸跟随 vm.currentSize 变化，产生展开/收起动画
+            // 2. 灵动岛主体
             ZStack(alignment: .top) {
-                // 背景形状
+                // --- Layer A: 背景 (黑色药丸) ---
                 NotchShape(
                     topCornerRadius: vm.currentTopRadius,
                     bottomCornerRadius: vm.currentBottomRadius
                 )
                 .fill(Color.black)
-                .shadow(color: .black.opacity(0.4), radius: 10, x: 0, y: 5)
+                .shadow(color: .black.opacity(0.4), radius: 12, x: 0, y: 6)
+                .frame(width: vm.currentSize.width, height: vm.currentSize.height)
 
-                // 3. 内容层 (根据状态切换)
-                if vm.state == .closed {
-                    // === [折叠状态 UI] ===
-                    HStack(spacing: 0) {
-                        // 左侧信息
-                        HStack(spacing: 6) {
-                            Image(systemName: "cloud.fill")
-                                .font(.system(size: 12))
-                                .foregroundColor(.white.opacity(0.6))
-                            // Text("24°")
-                            //     .font(.system(size: 12, weight: .medium))
-                            //     .foregroundColor(.white)
-                        }
-                        .padding(.leading, 14)
-
-                        Spacer()
-
-                        // 中间避让物理刘海区域 (根据实际机型调整占位)
-                        Spacer().frame(width: 100)
-
-                        Spacer()
-
-                        // 右侧占位 (给 WebView 留位置)
-                        Spacer().frame(width: NotchConfig.VRM.headSize.width + 12)
-                    }
-                    .frame(height: NotchConfig.closedSize.height)
-
-                } else {
-                    // === [展开状态 UI] ===
-                    HStack(alignment: .top, spacing: 0) {
-                        // [左侧] SwiftUI 交互区
-                        VStack(alignment: .leading, spacing: 12) {
-                            // Header
-                            HStack {
-                                Text("Assistant")
-                                    .font(.headline)
-                                    .foregroundColor(.white)
-                                Spacer()
-                                if let tool = vm.currentTool {
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "hammer.fill")
-                                        Text(tool)
-                                    }
-                                    .font(.caption2)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(Color.white.opacity(0.2))
-                                    .clipShape(Capsule())
-                                }
-                            }
-
-                            // Chat Content
-                            ScrollView {
-                                Text(vm.chatContent)
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.white.opacity(0.9))
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-
-                            Spacer()
-
-                            // Bottom Actions
-                            HStack {
-                                Button(action: { print("Mic Tapped") }) {
-                                    Label("Chat", systemImage: "mic.fill")
-                                }
-                                .buttonStyle(.borderedProminent)
-                                .tint(.indigo)
-                                .controlSize(.small)
-                            }
-                        }
-                        .padding(EdgeInsets(top: 16, leading: 20, bottom: 16, trailing: 10))
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                        // [右侧] 给 WebView 留白
-                        Spacer().frame(width: NotchConfig.VRM.bodyWidth)
-                    }
-                    .padding(.top, NotchConfig.closedSize.height) // 让出顶部物理刘海高度
-                }
-
-                // 4. WebView 层 (始终浮在最上层，通过布局参数调整位置)
+                // --- Layer B: 3D 模型 (WebView) ---
+                // WebView 使用 Frame 动画，它会自动重排/缩放 Canvas
                 VRMWebView(state: vm.state)
                     .frame(
                         width: vm.state == .closed ? NotchConfig.VRM.headSize.width : NotchConfig.VRM.bodyWidth,
                         height: vm.state == .closed ? NotchConfig.VRM.headSize.height : (NotchConfig.openSize.height - NotchConfig.closedSize.height)
                     )
-                    .mask(RoundedRectangle(cornerRadius: vm.state == .closed ? NotchConfig.VRM.headCornerRadius : NotchConfig.VRM.bodyCornerRadius))
-                    // 动态定位：折叠时居中/置顶，展开时位于刘海下方
+                    .mask(
+                        RoundedRectangle(
+                            cornerRadius: vm.state == .closed ? NotchConfig.VRM.headCornerRadius : NotchConfig.VRM.bodyCornerRadius,
+                            style: .continuous
+                        )
+                    )
                     .padding(.top, vm.state == .closed ? (NotchConfig.closedSize.height - NotchConfig.VRM.headSize.height) / 2 : NotchConfig.closedSize.height)
-                    .padding(.trailing, 12)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                    .padding(.trailing, vm.state == .closed ? 12 : 10)
+                    .frame(
+                        width: vm.currentSize.width,
+                        height: vm.currentSize.height,
+                        alignment: .topTrailing
+                    )
+                    .zIndex(2)
+
+                // --- Layer C: UI 内容 ---
+                // [核心修改]
+                // 不使用 if/else，让两个视图始终存在，利用 scaleEffect 和 opacity 实现无缝混合
+                ZStack(alignment: .top) {
+                    // 1. 展开态内容 (ExpandedContent)
+                    ExpandedContent(vm: vm)
+                        // [关键点] 强制固定为展开后的大小，保证文字排版不乱
+                        .frame(width: NotchConfig.openSize.width, height: NotchConfig.openSize.height)
+                        // [视觉缩放] 当折叠时，缩小到 50% 并隐藏；展开时恢复 100%
+                        // 这里的动画曲线会完美跟随 vm.animation (Spring)
+                        .scaleEffect(vm.state == .expanded ? 1.0 : 0.5, anchor: .top)
+                        .opacity(vm.state == .expanded ? 1.0 : 0.0)
+                        // 稍微加一点垂直位移，增加“滑出”的动感
+                        .offset(y: vm.state == .expanded ? 0 : 15)
+                        // 折叠时禁止点击
+                        .allowsHitTesting(vm.state == .expanded)
+
+                    // 2. 折叠态内容 (CompactView)
+                    CompactView()
+                        .frame(width: NotchConfig.closedSize.width, height: NotchConfig.closedSize.height)
+                        // 展开时：放大并消失
+                        .scaleEffect(vm.state == .closed ? 1.0 : 1.2, anchor: .center)
+                        .opacity(vm.state == .closed ? 1.0 : 0.0)
+                        .allowsHitTesting(vm.state == .closed)
+                }
+                .frame(width: vm.currentSize.width, height: vm.currentSize.height, alignment: .top)
+                // 确保超出灵动岛圆角的内容被裁切
+                .clipShape(NotchShape(
+                    topCornerRadius: vm.currentTopRadius,
+                    bottomCornerRadius: vm.currentBottomRadius
+                ))
+                .zIndex(3)
             }
-            .frame(width: vm.currentSize.width, height: vm.currentSize.height, alignment: .top)
-            .contentShape(Rectangle()) // 确保透明区域也能响应 Hover
+            // .animation(vm.animation, value: vm.state)
+            // 交互触发
+            .contentShape(Rectangle())
             .onHover { hovering in
                 if hovering { vm.hoverStarted() }
                 else { vm.hoverEnded() }
             }
         }
-        // [关键修复] 锁定外层 Frame 为窗口最大尺寸，并顶部对齐
         .frame(width: NotchConfig.windowSize.width, height: NotchConfig.windowSize.height, alignment: .top)
         .ignoresSafeArea()
+    }
+}
+
+// --- 子视图组件 ---
+
+struct CompactView: View {
+    var body: some View {
+        HStack(spacing: 0) {
+            HStack(spacing: 6) {
+                Image(systemName: "cloud.fill")
+                    .font(.system(size: 12))
+                    .foregroundColor(.white.opacity(0.6))
+                Text("24°")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.white)
+            }
+            .padding(.leading, 14)
+
+            Spacer()
+            // 避让物理刘海
+            Spacer().frame(width: 100)
+            Spacer()
+            // 右侧留给 WebView
+            Spacer().frame(width: NotchConfig.VRM.headSize.width + 12)
+        }
+        .frame(height: NotchConfig.closedSize.height)
+    }
+}
+
+struct ExpandedContent: View {
+    @ObservedObject var vm: NotchViewModel
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 0) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Assistant")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                    Spacer()
+                    if let tool = vm.currentTool {
+                        HStack(spacing: 4) {
+                            Image(systemName: "hammer.fill")
+                            Text(tool)
+                        }
+                        .font(.caption2)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.white.opacity(0.2))
+                        .clipShape(Capsule())
+                    }
+                }
+
+                ScrollView {
+                    Text(vm.chatContent)
+                        .font(.system(size: 14))
+                        .foregroundColor(.white.opacity(0.9))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer()
+
+                HStack {
+                    Button(action: {}) {
+                        Label("Chat", systemImage: "mic.fill")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.indigo)
+                    .controlSize(.small)
+                }
+            }
+            .padding(EdgeInsets(top: 16, leading: 20, bottom: 16, trailing: 10))
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            Spacer().frame(width: NotchConfig.VRM.bodyWidth)
+        }
+        .padding(.top, NotchConfig.closedSize.height)
     }
 }
