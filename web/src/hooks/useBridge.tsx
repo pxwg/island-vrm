@@ -6,6 +6,8 @@ export interface AgentPerformance {
   intensity?: number;
   action?: string; // 例如 'nod', 'shake', 'wave'
   audio_url?: string;
+  // [新增]
+  duration?: number;
 }
 
 export type AgentState = 'idle' | 'listening' | 'thinking';

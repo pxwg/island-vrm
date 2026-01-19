@@ -27,4 +27,5 @@ struct Performance: Codable {
     let intensity: Double?
     let action: String?
     let audio_url: String?
+    let duration: Double?
 }
