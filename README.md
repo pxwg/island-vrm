@@ -27,6 +27,55 @@ https://github.com/user-attachments/assets/fca4ba8c-1538-4334-b531-7d4d15a83065
 - 头部与眼睛跟随鼠标移动
 - 循环播放 VRMA 动作，即使原本动作不是循环的
 - 允许手动调节模型位置与缩放，保证对于不同模型均能较好展示
+  - 暂时通过修改代码中的常量实现，后续计划添加 UI 界面进行调节
+- 简单的 API 调用，用于配置人物的表情、话语等后端 (WIP)
+
+### API 说明
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AgentPerformance",
+  "type": "object",
+  "properties": {
+    "face": {
+      "type": "string",
+      "description": "Agent's facial expression",
+      "enum": [
+        "neutral",
+        "joy",
+        "angry",
+        "sorrow",
+        "fun",
+        "surprise"
+      ]
+    },
+    "intensity": {
+      "type": "number",
+      "description": "Intensity of the expression (optional)",
+      "minimum": 0
+    },
+    "action": {
+      "type": "string",
+      "description": "Agent's action, e.g., 'nod', 'shake', 'wave' (optional)"
+    },
+    "audio_url": {
+      "type": "string",
+      "description": "URL to the audio file (optional)",
+      "format": "uri"
+    },
+    "duration": {
+      "type": "number",
+      "description": "Duration of the performance in seconds (optional)",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "face"
+  ],
+  "additionalProperties": false
+}
+```
 
 ## 快速开始
 
