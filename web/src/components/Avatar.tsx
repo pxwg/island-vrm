@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useFrame, useThree, useLoader } from '@react-three/fiber'
-import { GLTFLoader } from 'three-stdlib'
+import {GLTFLoader} from 'three-stdlib'
 import * as THREE from 'three'
 import { VRMLoaderPlugin, VRM } from '@pixiv/three-vrm'
 import { VRMAnimationLoaderPlugin, createVRMAnimationClip } from '@pixiv/three-vrm-animation'
@@ -8,20 +8,19 @@ import { VRMAnimationLoaderPlugin, createVRMAnimationClip } from '@pixiv/three-v
 interface AvatarProps {
   mouseRef: React.MutableRefObject<{ x: number; y: number }>
   mode: 'head' | 'body'
+  // [新增]
+  headNodeRef?: React.MutableRefObject<THREE.Object3D | null>
 }
 
-export function Avatar({ mouseRef, mode }: AvatarProps) {
-  const { scene } = useThree() // 移除了 camera，因为它现在由 CameraRig 接管
+export function Avatar({ mouseRef, mode, headNodeRef }: AvatarProps) {
+  const { scene } = useThree()
   const vrmRef = useRef<VRM | null>(null)
   const mixerRef = useRef<THREE.AnimationMixer | null>(null)
   
-  // === 状态 Refs ===
   const currentYaw = useRef(0)
   const currentPitch = useRef(0)
-  // 眼球追踪的目标物体
   const lookAtTargetRef = useRef<THREE.Object3D>(new THREE.Object3D())
 
-  // 1. 加载资源
   const gltf = useLoader(GLTFLoader, './avatar.vrm', (loader) => {
     (loader as any).register((parser: any) => new VRMLoaderPlugin(parser))
   })
@@ -33,22 +32,24 @@ export function Avatar({ mouseRef, mode }: AvatarProps) {
   })
   const { userData: animUserData } = gltfAnim
 
-  // 2. 初始化逻辑
   useEffect(() => {
     const vrm = userData.vrm as VRM
     if (!vrm) return
     vrmRef.current = vrm
 
-    // (A) 模型初始化
-    vrm.scene.rotation.y = Math.PI // 转身面向镜头
+    vrm.scene.rotation.y = Math.PI
+
+    // [新增] 保存头部节点引用供 CameraRig 使用
+    if (headNodeRef) {
+        const head = vrm.humanoid.getRawBoneNode('head')
+        if (head) headNodeRef.current = head
+    }
     
-    // (B) 设置眼球追踪目标
     scene.add(lookAtTargetRef.current)
     if (vrm.lookAt) {
         vrm.lookAt.target = lookAtTargetRef.current
     }
 
-    // (C) 播放动画
     if (animUserData.vrmAnimations && animUserData.vrmAnimations[0]) {
       const mixer = new THREE.AnimationMixer(vrm.scene)
       const clip = createVRMAnimationClip(animUserData.vrmAnimations[0], vrm)
@@ -59,19 +60,15 @@ export function Avatar({ mouseRef, mode }: AvatarProps) {
     return () => {
         scene.remove(lookAtTargetRef.current)
     }
-  }, [userData, animUserData, scene])
+  }, [userData, animUserData, scene, headNodeRef])
 
-  // 3. 核心渲染循环
-  // [修复] 将 state 改为 _，避免 TS 报错未使用
   useFrame((_, delta) => {
     const vrm = vrmRef.current
     if (!vrm) return
 
-    // A. 更新基础动画
     if (mixerRef.current) mixerRef.current.update(delta)
     vrm.update(delta)
 
-    // B. 鼠标跟随计算
     const { x: mouseX, y: mouseY } = mouseRef.current
     const isClosedMode = (mode === 'head')
     
@@ -94,27 +91,24 @@ export function Avatar({ mouseRef, mode }: AvatarProps) {
     currentYaw.current = THREE.MathUtils.lerp(currentYaw.current, targetYaw, 0.1)
     currentPitch.current = THREE.MathUtils.lerp(currentPitch.current, targetPitch, 0.1)
 
-    // C. 驱动骨骼旋转
     const head = vrm.humanoid.getRawBoneNode('head')
-    const neck = vrm.humanoid.getRawBoneNode('neck')
+    const ZYNeck = vrm.humanoid.getRawBoneNode('neck')
     const spine = vrm.humanoid.getRawBoneNode('upperChest') || vrm.humanoid.getRawBoneNode('chest')
 
     if (spine) {
         spine.rotation.y += currentYaw.current * 0.2
         spine.rotation.x += currentPitch.current * 0.2
     }
-    if (neck) {
-        neck.rotation.y += currentYaw.current * 0.3
-        neck.rotation.x += currentPitch.current * 0.3
+    if (ZYNeck) { // 这里原代码变量名可能是 neck
+        ZYNeck.rotation.y += currentYaw.current * 0.3
+        ZYNeck.rotation.x += currentPitch.current * 0.3
     }
     if (head) {
         head.rotation.y += currentYaw.current * 0.5
         head.rotation.x += currentPitch.current * 0.5
     }
 
-    // E. 眼球追踪
     if (lookAtTargetRef.current && head) {
-        // 强制更新矩阵以获取准确位置
         vrm.scene.updateMatrixWorld()
         const headPos = head.getWorldPosition(new THREE.Vector3())
         
