@@ -1,7 +1,6 @@
 import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
-import { OrbitControls } from '@react-three/drei'
 import type { CameraConfig } from '../hooks/useBridge'
 
 interface CameraRigProps {
