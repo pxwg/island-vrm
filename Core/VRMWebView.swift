@@ -32,9 +32,29 @@ class SharedWebViewHelper: NSObject, WKNavigationDelegate, WKUIDelegate {
 
         startMouseTracking()
     }
+    
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        // 页面加载完，立刻同步当前配置
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            self.updateCameraConfig(CameraConfigStore.shared.config)
+        }
+    }
 
     func setMode(_ mode: String) {
         webView.evaluateJavaScript("window.setCameraMode('\(mode)')", completionHandler: nil)
+    }
+
+    // [新增] 发送相机配置
+    func updateCameraConfig(_ config: CameraConfig) {
+        do {
+            let data = try JSONEncoder().encode(config)
+            if let jsonString = String(data: data, encoding: .utf8) {
+                let js = "if(window.updateCameraConfig) window.updateCameraConfig(\(jsonString))"
+                webView.evaluateJavaScript(js, completionHandler: nil)
+            }
+        } catch {
+            print("Failed to encode camera config: \(error)")
+        }
     }
 
     // [新增] 发送演绎指令

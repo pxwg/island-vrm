@@ -7,6 +7,14 @@ class NotchViewModel: ObservableObject {
     }
 
     @Published var state: State = .closed
+    
+    // [新增] 强制覆盖状态 (用于配置模式)
+    @Published var overrideState: State? = nil
+
+    // [新增] 计算属性：有效状态
+    var effectiveState: State {
+        return overrideState ?? state
+    }
 
     // [UI 数据源]
     @Published var chatContent: String = "你好！我是你的 AI 桌面助手。"
@@ -19,15 +27,15 @@ class NotchViewModel: ObservableObject {
 
     // 尺寸配置
     var currentSize: CGSize {
-        state == .closed ? NotchConfig.closedSize : NotchConfig.openSize
+        effectiveState == .closed ? NotchConfig.closedSize : NotchConfig.openSize
     }
 
     var currentTopRadius: CGFloat {
-        state == .closed ? NotchConfig.radius.closed.top : NotchConfig.radius.opened.top
+        effectiveState == .closed ? NotchConfig.radius.closed.top : NotchConfig.radius.opened.top
     }
 
     var currentBottomRadius: CGFloat {
-        state == .closed ? NotchConfig.radius.closed.bottom : NotchConfig.radius.opened.bottom
+        effectiveState == .closed ? NotchConfig.radius.closed.bottom : NotchConfig.radius.opened.bottom
     }
 
     // duration: 0.5 秒，提供平滑、从容的展开感
@@ -57,11 +65,12 @@ class NotchViewModel: ObservableObject {
     // [自动折叠逻辑]
     private func scheduleAutoCollapse() {
         collapseWorkItem?.cancel()
-        if isHovering { return }
+        // 配置模式下禁止自动折叠
+        if isHovering || overrideState != nil { return }
 
         let item = DispatchWorkItem { [weak self] in
             guard let self = self else { return }
-            if !self.isHovering {
+            if !self.isHovering && self.overrideState == nil {
                 withAnimation(self.animation) {
                     self.state = .closed
                 }
@@ -116,6 +125,9 @@ class NotchViewModel: ObservableObject {
     }
 
     func hoverStarted() {
+        // 配置模式下忽略 Hover
+        if overrideState != nil { return }
+        
         isHovering = true
         collapseWorkItem?.cancel()
 
@@ -125,6 +137,8 @@ class NotchViewModel: ObservableObject {
     }
 
     func hoverEnded() {
+        if overrideState != nil { return }
+        
         isHovering = false
         withAnimation(animation) {
             state = .closed

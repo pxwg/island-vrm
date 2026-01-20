@@ -51,7 +51,8 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
 
     public func applicationDidFinishLaunching(_: Notification) {
         window = NotchWindow()
-        let contentView = NotchView()
+        // 使用全局 VM
+        let contentView = NotchView(vm: globalVM)
 
         let hostingView = NSHostingView(rootView: contentView)
         hostingView.sizingOptions = .minSize // 允许 View 自由调整大小

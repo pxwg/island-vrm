@@ -1,12 +1,25 @@
 import { useEffect, useRef, useState } from 'react'
 
-// === 1. 定义协议类型 ===
+// === 类型定义 ===
+export interface Vector3 { x: number; y: number; z: number }
+
+export interface CameraSetting {
+    position: Vector3
+    target: Vector3
+    fov: number
+}
+
+export interface CameraConfig {
+    head: CameraSetting
+    body: CameraSetting
+    lerpSpeed: number
+}
+
 export interface AgentPerformance {
   face: 'neutral' | 'joy' | 'angry' | 'sorrow' | 'fun' | 'surprise';
   intensity?: number;
-  action?: string; // 例如 'nod', 'shake', 'wave'
+  action?: string;
   audio_url?: string;
-  // [新增]
   duration?: number;
 }
 
@@ -17,9 +30,10 @@ declare global {
     updateMouseParams?: (dx: number, dy: number) => void;
     setCameraMode?: (mode: string) => void;
     updateSize?: (w: number, h: number) => void;
-    // [新增] 核心指令接口
     triggerPerformance?: (data: AgentPerformance) => void;
     setAgentState?: (state: AgentState) => void;
+    // [新增] 接收相机配置
+    updateCameraConfig?: (config: CameraConfig) => void;
   }
 }
 
@@ -27,10 +41,11 @@ export function useNativeBridge() {
   const mouseRef = useRef({ x: 0, y: 0 })
   const [cameraMode, setCameraModeState] = useState<'head' | 'body'>('head')
   const [windowSize, setWindowSize] = useState<{ width: number, height: number } | null>(null)
-  
-  // [新增] 状态暴露
   const [agentState, setAgentState] = useState<AgentState>('idle')
   const [performance, setPerformance] = useState<AgentPerformance | null>(null)
+  
+  // [新增] 相机配置状态
+  const [cameraConfig, setCameraConfig] = useState<CameraConfig | null>(null)
 
   useEffect(() => {
     window.updateMouseParams = (dx, dy) => {
@@ -47,15 +62,20 @@ export function useNativeBridge() {
       setWindowSize({ width: w, height: h })
     }
 
-    // [新增] 实现协议接口
     window.triggerPerformance = (data) => {
-      console.log("[Bridge] Performance:", data)
+      // console.log("[Bridge] Performance:", data)
       setPerformance({ ...data, intensity: data.intensity ?? 1.0 })
     }
 
     window.setAgentState = (state) => {
-      console.log("[Bridge] State:", state)
+      // console.log("[Bridge] State:", state)
       setAgentState(state)
+    }
+
+    // [新增] 监听配置更新
+    window.updateCameraConfig = (config) => {
+        // console.log("[Bridge] Config Updated:", config)
+        setCameraConfig(config)
     }
 
     return () => {
@@ -64,8 +84,9 @@ export function useNativeBridge() {
       delete window.updateSize
       delete window.triggerPerformance
       delete window.setAgentState
+      delete window.updateCameraConfig
     }
   }, [])
 
-  return { mouseRef, cameraMode, windowSize, agentState, performance }
+  return { mouseRef, cameraMode, windowSize, agentState, performance, cameraConfig }
 }

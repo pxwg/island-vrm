@@ -1,27 +1,21 @@
-import { useState, useRef, useMemo } from 'react'
+import { useRef, useMemo } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { Avatar } from './components/Avatar'
 import { CameraRig } from './components/CameraRig'
-import { CameraConfigurator } from './components/CameraConfigurator'
 import { ScissorDirector } from './components/ScissorDirector'
 import { useNativeBridge } from './hooks/useBridge'
 import { DEFAULT_CONFIG } from './utils/layout'
-import type { ViewportConfig } from './utils/layout'
 import * as THREE from 'three'
 
 function App() {
-  // [修改] 解构出 agentState 和 performance
-  const { mouseRef, cameraMode: nativeMode, windowSize: swiftSize, agentState, performance } = useNativeBridge()
+  // [修改] 解构出 cameraConfig
+  const { mouseRef, cameraMode: nativeMode, windowSize: swiftSize, agentState, performance, cameraConfig } = useNativeBridge()
   
-  const IS_DEBUG_MODE = false
+  // 生产环境不再需要 Web 端的 debugMode，全部由 Native 驱动
+  // 如果尚未收到 Native 配置，cameraConfig 为 null，Rig 会等待
   
-  const [debugMode, setDebugMode] = useState<'head' | 'body'>('head')
-  const activeMode = IS_DEBUG_MODE ? debugMode : nativeMode
-
-  const [manualOverride, setManualOverride] = useState<Partial<ViewportConfig>>({})
-
   const activeConfig = useMemo(() => {
-      const base = DEFAULT_CONFIG[activeMode]
+      const base = DEFAULT_CONFIG[nativeMode]
       let dynamicWidth = base.width
       let dynamicHeight = base.height
       
@@ -32,51 +26,33 @@ function App() {
 
       return {
           ...base,
-          width: manualOverride.width ?? dynamicWidth,
-          height: manualOverride.height ?? dynamicHeight,
-          name: (swiftSize ? "[Swift Sync] " : "[Manual] ") + base.name
+          width: dynamicWidth,
+          height: dynamicHeight,
+          name: swiftSize ? "[Swift Sync] " + base.name : base.name
       }
-  }, [activeMode, swiftSize, manualOverride])
-
-  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null)
-  const orbitRef = useRef<any>(null)
+  }, [nativeMode, swiftSize])
 
   const headNodeRef = useRef<THREE.Object3D | null>(null)
 
   return (
-    <div style={{ width: '100vw', height: '100vh', background: IS_DEBUG_MODE ? '#111' : 'transparent' }}>
-      
-      {IS_DEBUG_MODE && (
-        <CameraConfigurator 
-            currentMode={activeMode} 
-            currentConfig={activeConfig}
-            onConfigChange={(newConf) => setManualOverride(prev => ({...prev, ...newConf}))}
-            onModeChange={setDebugMode}
-            cameraRef={cameraRef}
-            orbitRef={orbitRef}
-        />
-      )}
-
+    <div style={{ width: '100vw', height: '100vh', background: 'transparent' }}>
       <Canvas
-        onCreated={({ camera }) => {
-            cameraRef.current = camera as THREE.PerspectiveCamera
-        }}
         gl={{ alpha: true, antialias: true }}
       >
-        <ScissorDirector config={activeConfig} active={IS_DEBUG_MODE} />
+        <ScissorDirector config={activeConfig} active={true} />
 
         <directionalLight position={[1, 1, 1]} intensity={1.2} />
         <ambientLight intensity={0.8} />
 
-        {/* [修改] 传递 agentState 和 performance */}
         <Avatar 
             mouseRef={mouseRef} 
-            mode={activeMode} 
+            mode={nativeMode} 
             headNodeRef={headNodeRef} 
             agentState={agentState} 
             performance={performance}
         />
-        <CameraRig ref={orbitRef} mode={activeMode} debug={IS_DEBUG_MODE} headNodeRef={headNodeRef} />
+        {/* [修改] 传入 cameraConfig */}
+        <CameraRig mode={nativeMode} config={cameraConfig} headNodeRef={headNodeRef} />
       </Canvas>
     </div>
   )
