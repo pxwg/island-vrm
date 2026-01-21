@@ -1,20 +1,26 @@
 import SwiftUI
 
-struct SettingsView: View {
+// [修改] 标记为 public
+public struct SettingsView: View {
     @ObservedObject var settings = CameraSettings.shared
     @State private var selectedTab: SettingsTab = .head
     @Environment(\.dismiss) private var dismiss
-    
-    // Callback for when Body tab is selected (triggers God Mode)
-    var onBodyModeSelected: ((Bool) -> Void)?
-    
+
+    // [修改] 标记为 public，以便外部可以设置回调
+    public var onBodyModeSelected: ((Bool) -> Void)?
+
+    // [新增] 显式的 public 初始化器
+    public init(onBodyModeSelected: ((Bool) -> Void)? = nil) {
+        self.onBodyModeSelected = onBodyModeSelected
+    }
+
     enum SettingsTab: String, CaseIterable {
         case head = "Head Mode"
         case body = "Body Mode"
         case about = "About"
     }
-    
-    var body: some View {
+
+    public var body: some View {
         TabView(selection: $selectedTab) {
             // Head Mode Tab
             CameraModeSettingsView(
@@ -29,7 +35,7 @@ struct SettingsView: View {
                 Label("Head Mode", systemImage: "person.crop.circle")
             }
             .tag(SettingsTab.head)
-            
+
             // Body Mode Tab
             CameraModeSettingsView(
                 mode: "Body",
@@ -43,7 +49,7 @@ struct SettingsView: View {
                 Label("Body Mode", systemImage: "figure.stand")
             }
             .tag(SettingsTab.body)
-            
+
             // About Tab
             AboutView()
                 .tabItem {
@@ -70,92 +76,93 @@ struct SettingsView: View {
 }
 
 // MARK: - Camera Mode Settings View
+
+// 保持 internal 即可，因为只在 SettingsView 内部使用
 struct CameraModeSettingsView: View {
     let mode: String
     @Binding var setting: CameraSetting
     let onSave: () -> Void
-    
-    // [新增] 防抖定时器
+
     @State private var saveTimer: Timer?
-    
+
     var body: some View {
         Form {
             Section("Camera Position") {
                 HStack {
                     Text("X:")
                         .frame(width: 30, alignment: .leading)
-                    Slider(value: $setting.position.x, in: -5...5, step: 0.01)
+                    Slider(value: $setting.position.x, in: -5 ... 5, step: 0.01)
                         .onChange(of: setting.position.x) { _, _ in debouncedSave() }
                     Text(String(format: "%.3f", setting.position.x))
                         .frame(width: 60, alignment: .trailing)
                         .monospacedDigit()
                 }
-                
+
                 HStack {
                     Text("Y:")
                         .frame(width: 30, alignment: .leading)
-                    Slider(value: $setting.position.y, in: -5...5, step: 0.01)
+                    Slider(value: $setting.position.y, in: -5 ... 5, step: 0.01)
                         .onChange(of: setting.position.y) { _, _ in debouncedSave() }
                     Text(String(format: "%.3f", setting.position.y))
                         .frame(width: 60, alignment: .trailing)
                         .monospacedDigit()
                 }
-                
+
                 HStack {
                     Text("Z:")
                         .frame(width: 30, alignment: .leading)
-                    Slider(value: $setting.position.z, in: -5...5, step: 0.01)
+                    Slider(value: $setting.position.z, in: -5 ... 5, step: 0.01)
                         .onChange(of: setting.position.z) { _, _ in debouncedSave() }
                     Text(String(format: "%.3f", setting.position.z))
                         .frame(width: 60, alignment: .trailing)
                         .monospacedDigit()
                 }
             }
-            
+
             Section("Look At Target") {
                 HStack {
                     Text("X:")
                         .frame(width: 30, alignment: .leading)
-                    Slider(value: $setting.target.x, in: -5...5, step: 0.01)
+                    Slider(value: $setting.target.x, in: -5 ... 5, step: 0.01)
                         .onChange(of: setting.target.x) { _, _ in debouncedSave() }
                     Text(String(format: "%.3f", setting.target.x))
                         .frame(width: 60, alignment: .trailing)
                         .monospacedDigit()
                 }
-                
+
                 HStack {
                     Text("Y:")
                         .frame(width: 30, alignment: .leading)
-                    Slider(value: $setting.target.y, in: -5...5, step: 0.01)
+                    Slider(value: $setting.target.y, in: -5 ... 5, step: 0.01)
                         .onChange(of: setting.target.y) { _, _ in debouncedSave() }
                     Text(String(format: "%.3f", setting.target.y))
                         .frame(width: 60, alignment: .trailing)
                         .monospacedDigit()
                 }
-                
+
                 HStack {
                     Text("Z:")
                         .frame(width: 30, alignment: .leading)
-                    Slider(value: $setting.target.z, in: -5...5, step: 0.01)
+                    Slider(value: $setting.target.z, in: -5 ... 5, step: 0.01)
                         .onChange(of: setting.target.z) { _, _ in debouncedSave() }
                     Text(String(format: "%.3f", setting.target.z))
                         .frame(width: 60, alignment: .trailing)
                         .monospacedDigit()
                 }
             }
-            
+
             Section("Field of View") {
                 HStack {
                     Text("FOV:")
                         .frame(width: 50, alignment: .leading)
-                    Slider(value: $setting.fov, in: 10...120, step: 1)
+                    Slider(value: $setting.fov, in: 10 ... 120, step: 1)
                         .onChange(of: setting.fov) { _, _ in debouncedSave() }
                     Text(String(format: "%.0f°", setting.fov))
                         .frame(width: 50, alignment: .trailing)
                         .monospacedDigit()
                 }
             }
-            
+
             Section {
                 HStack {
                     Spacer()
@@ -164,7 +171,7 @@ struct CameraModeSettingsView: View {
                         onSave()
                     }
                     .foregroundColor(.red)
-                    
+
                     Button("Apply Changes") {
                         onSave()
                     }
@@ -175,8 +182,7 @@ struct CameraModeSettingsView: View {
         }
         .formStyle(.grouped)
     }
-    
-    // [新增] 防抖保存方法：延迟 0.3 秒后保存
+
     private func debouncedSave() {
         saveTimer?.invalidate()
         saveTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: false) { _ in
@@ -186,33 +192,34 @@ struct CameraModeSettingsView: View {
 }
 
 // MARK: - About View
+
 struct AboutView: View {
     var body: some View {
         VStack(spacing: 20) {
             Image(systemName: "figure.stand")
                 .font(.system(size: 60))
                 .foregroundColor(.blue)
-            
+
             Text("Island VRM")
                 .font(.title)
                 .fontWeight(.bold)
-            
+
             Text("Version 1.0.0")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
-            
+
             Divider()
                 .padding(.horizontal, 40)
-            
+
             VStack(alignment: .leading, spacing: 10) {
                 Text("A native macOS application for displaying VRM models in the Dynamic Island.")
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
-                
+
                 Text("Features:")
                     .font(.headline)
                     .padding(.top)
-                
+
                 VStack(alignment: .leading, spacing: 5) {
                     Label("Real-time camera configuration", systemImage: "camera.fill")
                     Label("Native persistence with UserDefaults", systemImage: "externaldrive.fill")
@@ -222,9 +229,9 @@ struct AboutView: View {
                 .padding(.leading, 20)
             }
             .frame(maxWidth: 400)
-            
+
             Spacer()
-            
+
             Text("© 2024 PXWG. All rights reserved.")
                 .font(.caption)
                 .foregroundColor(.secondary)
@@ -234,7 +241,6 @@ struct AboutView: View {
     }
 }
 
-// MARK: - Preview
 #Preview("Settings - Head Mode") {
     SettingsView()
 }
