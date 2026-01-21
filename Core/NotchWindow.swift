@@ -48,10 +48,13 @@ class NotchWindow: NSPanel {
 // 在 AppDelegate 或 App 入口中使用
 public class AppDelegate: NSObject, NSApplicationDelegate {
     var window: NotchWindow!
+    var viewModel: NotchViewModel? // [新增] 暴露 ViewModel 供 App 访问
 
     public func applicationDidFinishLaunching(_: Notification) {
         window = NotchWindow()
-        let contentView = NotchView()
+        let vm = NotchViewModel()
+        self.viewModel = vm // [新增] 保存引用
+        let contentView = NotchView(vm: vm)
 
         let hostingView = NSHostingView(rootView: contentView)
         hostingView.sizingOptions = .minSize // 允许 View 自由调整大小

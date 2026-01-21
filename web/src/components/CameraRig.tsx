@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 're
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { OrbitControls } from '@react-three/drei'
+import type { CameraConfig } from '../hooks/useBridge'
 
 interface CameraSetting {
     position: { x: number; y: number; z: number }
@@ -9,19 +10,14 @@ interface CameraSetting {
     fov: number
 }
   
-interface CameraConfig {
-    head: CameraSetting
-    body: CameraSetting
-    lerpSpeed: number
-}
-  
 interface CameraRigProps {
     mode: 'head' | 'body'
     debug?: boolean
     headNodeRef?: React.MutableRefObject<THREE.Object3D | null>
+    nativeConfig?: CameraConfig | null
 }
 
-export const CameraRig = forwardRef(({ mode, debug = false, headNodeRef }: CameraRigProps, ref) => {
+export const CameraRig = forwardRef(({ mode, debug = false, headNodeRef, nativeConfig }: CameraRigProps, ref) => {
   const { camera } = useThree()
   const [config, setConfig] = useState<CameraConfig | null>(null)
   
@@ -34,25 +30,50 @@ export const CameraRig = forwardRef(({ mode, debug = false, headNodeRef }: Camer
 
   useImperativeHandle(ref, () => controlsRef.current)
 
+  // [新增] 监听 nativeConfig 变化，实时更新配置
   useEffect(() => {
-    fetch('./camera.json')
-      .then((res) => res.json())
-      .then((data) => {
-        setConfig(data)
-        const setting = mode === 'head' ? data.head : data.body
-        if (debug && camera instanceof THREE.PerspectiveCamera) {
-             // Debug 模式保持原始数据，方便校准
-             camera.position.set(setting.position.x, setting.position.y, setting.position.z)
-             camera.fov = setting.fov
-             camera.updateProjectionMatrix()
-             if (controlsRef.current) {
-                 controlsRef.current.target.set(setting.target.x, setting.target.y, setting.target.z)
-                 controlsRef.current.update()
-             }
-        }
-      })
-      .catch(console.error)
-  }, [debug]) 
+    if (nativeConfig) {
+      console.log("[CameraRig] Received native config:", nativeConfig)
+      setConfig(nativeConfig)
+    }
+  }, [nativeConfig])
+
+  useEffect(() => {
+    // [修改] 优先使用 nativeConfig，否则回退到 camera.json
+    if (nativeConfig) {
+      setConfig(nativeConfig)
+      const setting = mode === 'head' ? nativeConfig.head : nativeConfig.body
+      if (debug && camera instanceof THREE.PerspectiveCamera) {
+           // Debug 模式保持原始数据，方便校准
+           camera.position.set(setting.position.x, setting.position.y, setting.position.z)
+           camera.fov = setting.fov
+           camera.updateProjectionMatrix()
+           if (controlsRef.current) {
+               controlsRef.current.target.set(setting.target.x, setting.target.y, setting.target.z)
+               controlsRef.current.update()
+           }
+      }
+    } else {
+      // 回退到 camera.json
+      fetch('./camera.json')
+        .then((res) => res.json())
+        .then((data) => {
+          setConfig(data)
+          const setting = mode === 'head' ? data.head : data.body
+          if (debug && camera instanceof THREE.PerspectiveCamera) {
+               // Debug 模式保持原始数据，方便校准
+               camera.position.set(setting.position.x, setting.position.y, setting.position.z)
+               camera.fov = setting.fov
+               camera.updateProjectionMatrix()
+               if (controlsRef.current) {
+                   controlsRef.current.target.set(setting.target.x, setting.target.y, setting.target.z)
+                   controlsRef.current.update()
+               }
+          }
+        })
+        .catch(console.error)
+    }
+  }, [debug, nativeConfig]) 
 
   useEffect(() => {
     if (!config || debug) return 

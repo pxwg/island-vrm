@@ -10,8 +10,8 @@ import type { ViewportConfig } from './utils/layout'
 import * as THREE from 'three'
 
 function App() {
-  // [修改] 解构出 agentState 和 performance
-  const { mouseRef, cameraMode: nativeMode, windowSize: swiftSize, agentState, performance } = useNativeBridge()
+  // [修改] 解构出 agentState, performance 和 cameraConfig
+  const { mouseRef, cameraMode: nativeMode, windowSize: swiftSize, agentState, performance, cameraConfig } = useNativeBridge()
   
   const IS_DEBUG_MODE = false
   
@@ -68,7 +68,7 @@ function App() {
         <directionalLight position={[1, 1, 1]} intensity={1.2} />
         <ambientLight intensity={0.8} />
 
-        {/* [修改] 传递 agentState 和 performance */}
+        {/* [修改] 传递 agentState, performance 和 cameraConfig */}
         <Avatar 
             mouseRef={mouseRef} 
             mode={activeMode} 
@@ -76,7 +76,13 @@ function App() {
             agentState={agentState} 
             performance={performance}
         />
-        <CameraRig ref={orbitRef} mode={activeMode} debug={IS_DEBUG_MODE} headNodeRef={headNodeRef} />
+        <CameraRig 
+            ref={orbitRef} 
+            mode={activeMode} 
+            debug={IS_DEBUG_MODE} 
+            headNodeRef={headNodeRef} 
+            nativeConfig={cameraConfig}
+        />
       </Canvas>
     </div>
   )

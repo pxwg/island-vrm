@@ -16,6 +16,9 @@ class NotchViewModel: ObservableObject {
     private var collapseWorkItem: DispatchWorkItem?
     private var isHovering: Bool = false
     private let displayDuration: TimeInterval = 5.0 // 消息展示时长(秒)
+    
+    // [新增] God Mode 控制
+    @Published var isGodModeActive: Bool = false // 当设置面板的 Body 标签页打开时为 true
 
     // 尺寸配置
     var currentSize: CGSize {
@@ -57,11 +60,12 @@ class NotchViewModel: ObservableObject {
     // [自动折叠逻辑]
     private func scheduleAutoCollapse() {
         collapseWorkItem?.cancel()
-        if isHovering { return }
+        // God Mode: 禁用自动折叠
+        if isHovering || isGodModeActive { return }
 
         let item = DispatchWorkItem { [weak self] in
             guard let self = self else { return }
-            if !self.isHovering {
+            if !self.isHovering && !self.isGodModeActive {
                 withAnimation(self.animation) {
                     self.state = .closed
                 }
@@ -126,8 +130,30 @@ class NotchViewModel: ObservableObject {
 
     func hoverEnded() {
         isHovering = false
+        // God Mode: 悬停结束后保持展开状态
+        if !isGodModeActive {
+            withAnimation(animation) {
+                state = .closed
+            }
+        }
+    }
+    
+    // [新增] God Mode 控制方法
+    func enterGodMode() {
+        isGodModeActive = true
+        collapseWorkItem?.cancel()
         withAnimation(animation) {
-            state = .closed
+            state = .expanded
+        }
+    }
+    
+    func exitGodMode() {
+        isGodModeActive = false
+        // 退出 God Mode 时，如果不在悬停状态则自动折叠
+        if !isHovering {
+            withAnimation(animation) {
+                state = .closed
+            }
         }
     }
 }

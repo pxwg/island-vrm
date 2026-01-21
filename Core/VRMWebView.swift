@@ -32,6 +32,11 @@ class SharedWebViewHelper: NSObject, WKNavigationDelegate, WKUIDelegate {
 
         startMouseTracking()
     }
+    
+    // [新增] WKNavigationDelegate 方法：页面加载完成后注入配置
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        injectCameraConfig()
+    }
 
     func setMode(_ mode: String) {
         webView.evaluateJavaScript("window.setCameraMode('\(mode)')", completionHandler: nil)
@@ -54,6 +59,28 @@ class SharedWebViewHelper: NSObject, WKNavigationDelegate, WKUIDelegate {
     func setAgentState(_ state: String) {
         let js = "if(window.setAgentState) window.setAgentState('\(state)')"
         webView.evaluateJavaScript(js, completionHandler: nil)
+    }
+
+    // [新增] 实时更新相机配置
+    func updateCameraConfig() {
+        if let jsonString = CameraSettings.shared.toJSON() {
+            let js = "if(window.updateCameraConfig) window.updateCameraConfig(\(jsonString))"
+            webView.evaluateJavaScript(js, completionHandler: nil)
+        }
+    }
+    
+    // [新增] 初始化时注入相机配置
+    func injectCameraConfig() {
+        if let jsonString = CameraSettings.shared.toJSON() {
+            let js = "if(window.setCameraConfig) window.setCameraConfig(\(jsonString)); else window.__pendingCameraConfig = \(jsonString);"
+            webView.evaluateJavaScript(js) { _, error in
+                if let error = error {
+                    print("⚠️ Failed to inject camera config: \(error)")
+                } else {
+                    print("✅ Camera config injected successfully")
+                }
+            }
+        }
     }
 
     // --- 鼠标追踪逻辑 ---
