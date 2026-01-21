@@ -84,5 +84,6 @@ https://github.com/user-attachments/assets/fca4ba8c-1538-4334-b531-7d4d15a83065
 - git clone 本仓库
 - 下载 VRM 模型与动作资源，放置在 `web/public/` 目录下，命名为`avatar.vrm` 和 `idle.vrma`
 - 运行 `bash ./build.sh` 构建项目
-- 执行编译后的可执行文件 (暂时需要 `sudo` 权限)
+- 运行 `open ./build/IslandVRM.app` 运行项目
+  - 在托盘中找到应用图标，打开配置界面或退出应用
 - 可以在 `xcode` 中预览部分 UI
