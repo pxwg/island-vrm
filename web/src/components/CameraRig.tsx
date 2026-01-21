@@ -3,12 +3,6 @@ import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { OrbitControls } from '@react-three/drei'
 import type { CameraConfig } from '../hooks/useBridge'
-
-interface CameraSetting {
-    position: { x: number; y: number; z: number }
-    target: { x: number; y: number; z: number }
-    fov: number
-}
   
 interface CameraRigProps {
     mode: 'head' | 'body'

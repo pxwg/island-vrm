@@ -26,14 +26,12 @@ https://github.com/user-attachments/assets/fca4ba8c-1538-4334-b531-7d4d15a83065
 - 鼠标位于灵动岛区域时，展开灵动岛，显示更多动作
 - 头部与眼睛跟随鼠标移动
 - 循环播放 VRMA 动作，即使原本动作不是循环的
-- 允许手动调节模型位置与缩放，保证对于不同模型均能较好展示
-  - 暂时通过修改代码中的常量实现，后续计划添加 UI 界面进行调节 (WIP)
-  - 目前的使用方式：
-    - `cd` 到`./web` 目录
-    - 修改 `App.tsx` 中的 `const IS_DEBUG_MODE = false` 为 `true`
-    - 运行`npm run dev` 启动开发服务器
-    - 在对应的浏览器窗口中确定模型位置与缩放，并将复制的值更新回`public/camera.json`文件中
-    - 重新编译项目 (记得将 `IS_DEBUG_MODE` 改回 `false`，并`cd`到项目根目录)
+- **✨ 原生配置系统 (Native First)**：
+  - **零代码调整**：无需修改代码或重新编译，按 `Cmd + ,` 即可打开原生设置面板
+  - **实时反馈**：拖动滑块时，VRM 模型的相机位置、视角即时更新
+  - **智能联动 (God Mode)**：调整 Body 模式时，灵动岛自动展开并锁定，专注编辑
+  - **数据持久化**：所有配置自动保存至 macOS UserDefaults，重启应用后自动恢复
+  - 详见：[Native Configuration 文档](./docs/NATIVE_CONFIG.md)
 - 简单的 API 调用，用于配置人物的表情、话语等后端 (WIP)
 
 ### API 说明
