@@ -29,45 +29,40 @@ export const CameraRig = forwardRef(({ mode, debug = false, headNodeRef, nativeC
     if (nativeConfig) {
       console.log("[CameraRig] Received native config:", nativeConfig)
       setConfig(nativeConfig)
-    }
-  }, [nativeConfig])
-
-  useEffect(() => {
-    // [修改] 优先使用 nativeConfig，否则回退到 camera.json
-    if (nativeConfig) {
-      setConfig(nativeConfig)
-      const setting = mode === 'head' ? nativeConfig.head : nativeConfig.body
+      
+      // 在 debug 模式下，立即应用配置到相机
       if (debug && camera instanceof THREE.PerspectiveCamera) {
-           // Debug 模式保持原始数据，方便校准
-           camera.position.set(setting.position.x, setting.position.y, setting.position.z)
-           camera.fov = setting.fov
-           camera.updateProjectionMatrix()
-           if (controlsRef.current) {
-               controlsRef.current.target.set(setting.target.x, setting.target.y, setting.target.z)
-               controlsRef.current.update()
-           }
+        const setting = mode === 'head' ? nativeConfig.head : nativeConfig.body
+        camera.position.set(setting.position.x, setting.position.y, setting.position.z)
+        camera.fov = setting.fov
+        camera.updateProjectionMatrix()
+        if (controlsRef.current) {
+          controlsRef.current.target.set(setting.target.x, setting.target.y, setting.target.z)
+          controlsRef.current.update()
+        }
       }
     } else {
-      // 回退到 camera.json
-      fetch('./camera.json')
-        .then((res) => res.json())
-        .then((data) => {
-          setConfig(data)
-          const setting = mode === 'head' ? data.head : data.body
-          if (debug && camera instanceof THREE.PerspectiveCamera) {
-               // Debug 模式保持原始数据，方便校准
-               camera.position.set(setting.position.x, setting.position.y, setting.position.z)
-               camera.fov = setting.fov
-               camera.updateProjectionMatrix()
-               if (controlsRef.current) {
-                   controlsRef.current.target.set(setting.target.x, setting.target.y, setting.target.z)
-                   controlsRef.current.update()
-               }
-          }
-        })
-        .catch(console.error)
+      // 回退到 camera.json（仅在没有 nativeConfig 且 config 为空时）
+      if (!config) {
+        fetch('./camera.json')
+          .then((res) => res.json())
+          .then((data) => {
+            setConfig(data)
+            if (debug && camera instanceof THREE.PerspectiveCamera) {
+              const setting = mode === 'head' ? data.head : data.body
+              camera.position.set(setting.position.x, setting.position.y, setting.position.z)
+              camera.fov = setting.fov
+              camera.updateProjectionMatrix()
+              if (controlsRef.current) {
+                controlsRef.current.target.set(setting.target.x, setting.target.y, setting.target.z)
+                controlsRef.current.update()
+              }
+            }
+          })
+          .catch(console.error)
+      }
     }
-  }, [debug, nativeConfig]) 
+  }, [nativeConfig, debug, mode, camera, config]) 
 
   useEffect(() => {
     if (!config || debug) return 

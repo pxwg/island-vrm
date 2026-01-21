@@ -75,6 +75,9 @@ struct CameraModeSettingsView: View {
     @Binding var setting: CameraSetting
     let onSave: () -> Void
     
+    // [新增] 防抖定时器
+    @State private var saveTimer: Timer?
+    
     var body: some View {
         Form {
             Section("Camera Position") {
@@ -82,6 +85,7 @@ struct CameraModeSettingsView: View {
                     Text("X:")
                         .frame(width: 30, alignment: .leading)
                     Slider(value: $setting.position.x, in: -5...5, step: 0.01)
+                        .onChange(of: setting.position.x) { _, _ in debouncedSave() }
                     Text(String(format: "%.3f", setting.position.x))
                         .frame(width: 60, alignment: .trailing)
                         .monospacedDigit()
@@ -91,6 +95,7 @@ struct CameraModeSettingsView: View {
                     Text("Y:")
                         .frame(width: 30, alignment: .leading)
                     Slider(value: $setting.position.y, in: -5...5, step: 0.01)
+                        .onChange(of: setting.position.y) { _, _ in debouncedSave() }
                     Text(String(format: "%.3f", setting.position.y))
                         .frame(width: 60, alignment: .trailing)
                         .monospacedDigit()
@@ -100,6 +105,7 @@ struct CameraModeSettingsView: View {
                     Text("Z:")
                         .frame(width: 30, alignment: .leading)
                     Slider(value: $setting.position.z, in: -5...5, step: 0.01)
+                        .onChange(of: setting.position.z) { _, _ in debouncedSave() }
                     Text(String(format: "%.3f", setting.position.z))
                         .frame(width: 60, alignment: .trailing)
                         .monospacedDigit()
@@ -111,6 +117,7 @@ struct CameraModeSettingsView: View {
                     Text("X:")
                         .frame(width: 30, alignment: .leading)
                     Slider(value: $setting.target.x, in: -5...5, step: 0.01)
+                        .onChange(of: setting.target.x) { _, _ in debouncedSave() }
                     Text(String(format: "%.3f", setting.target.x))
                         .frame(width: 60, alignment: .trailing)
                         .monospacedDigit()
@@ -120,6 +127,7 @@ struct CameraModeSettingsView: View {
                     Text("Y:")
                         .frame(width: 30, alignment: .leading)
                     Slider(value: $setting.target.y, in: -5...5, step: 0.01)
+                        .onChange(of: setting.target.y) { _, _ in debouncedSave() }
                     Text(String(format: "%.3f", setting.target.y))
                         .frame(width: 60, alignment: .trailing)
                         .monospacedDigit()
@@ -129,6 +137,7 @@ struct CameraModeSettingsView: View {
                     Text("Z:")
                         .frame(width: 30, alignment: .leading)
                     Slider(value: $setting.target.z, in: -5...5, step: 0.01)
+                        .onChange(of: setting.target.z) { _, _ in debouncedSave() }
                     Text(String(format: "%.3f", setting.target.z))
                         .frame(width: 60, alignment: .trailing)
                         .monospacedDigit()
@@ -140,6 +149,7 @@ struct CameraModeSettingsView: View {
                     Text("FOV:")
                         .frame(width: 50, alignment: .leading)
                     Slider(value: $setting.fov, in: 10...120, step: 1)
+                        .onChange(of: setting.fov) { _, _ in debouncedSave() }
                     Text(String(format: "%.0f°", setting.fov))
                         .frame(width: 50, alignment: .trailing)
                         .monospacedDigit()
@@ -164,8 +174,12 @@ struct CameraModeSettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .onChange(of: setting) { _, _ in
-            // Auto-save on any change for real-time feedback
+    }
+    
+    // [新增] 防抖保存方法：延迟 0.3 秒后保存
+    private func debouncedSave() {
+        saveTimer?.invalidate()
+        saveTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: false) { _ in
             onSave()
         }
     }
