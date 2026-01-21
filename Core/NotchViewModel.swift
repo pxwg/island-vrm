@@ -1,23 +1,22 @@
 import SwiftUI
 
-class NotchViewModel: ObservableObject {
+// [修改] 标记为 public
+public class NotchViewModel: ObservableObject {
     enum State {
         case closed
         case expanded
     }
 
     @Published var state: State = .closed
-
-    // [UI 数据源]
     @Published var chatContent: String = "你好！我是你的 AI 桌面助手。"
     @Published var currentTool: String? = nil
 
-    // [自动折叠控制]
     private var collapseWorkItem: DispatchWorkItem?
     private var isHovering: Bool = false
-    private let displayDuration: TimeInterval = 5.0 // 消息展示时长(秒)
+    private let displayDuration: TimeInterval = 5.0
 
-    // 尺寸配置
+    @Published var isGodModeActive: Bool = false
+
     var currentSize: CGSize {
         state == .closed ? NotchConfig.closedSize : NotchConfig.openSize
     }
@@ -30,21 +29,23 @@ class NotchViewModel: ObservableObject {
         state == .closed ? NotchConfig.radius.closed.bottom : NotchConfig.radius.opened.bottom
     }
 
-    // duration: 0.5 秒，提供平滑、从容的展开感
     var animation: Animation {
         .easeInOut(duration: 0.5)
     }
 
-    // [修改] init 增加 isPreview 参数，默认 false
+    // [修改] init 需要是 public (如果需要在外部初始化，虽然这里是在内部 AppDelegate 初始化的，但为了 Public 类的一致性建议保留)
     init(isPreview: Bool = false) {
-        // 只有不是预览模式时，才启动服务器
         if !isPreview {
             setupServer()
         } else {
-            // [新增] 预览模式下的假数据
             print("Preview Mode: Server skipped")
             chatContent = "预览测试：这是一段模拟的对话内容..."
         }
+    }
+
+    // 如果外部需要无参初始化，可以提供一个 public convenience init
+    public convenience init() {
+        self.init(isPreview: false)
     }
 
     private func setupServer() {
@@ -54,14 +55,13 @@ class NotchViewModel: ObservableObject {
         LocalServer.shared.start()
     }
 
-    // [自动折叠逻辑]
     private func scheduleAutoCollapse() {
         collapseWorkItem?.cancel()
-        if isHovering { return }
+        if isHovering || isGodModeActive { return }
 
         let item = DispatchWorkItem { [weak self] in
             guard let self = self else { return }
-            if !self.isHovering {
+            if !self.isHovering && !self.isGodModeActive {
                 withAnimation(self.animation) {
                     self.state = .closed
                 }
@@ -126,8 +126,27 @@ class NotchViewModel: ObservableObject {
 
     func hoverEnded() {
         isHovering = false
+        if !isGodModeActive {
+            withAnimation(animation) {
+                state = .closed
+            }
+        }
+    }
+
+    public func enterGodMode() {
+        isGodModeActive = true
+        collapseWorkItem?.cancel()
         withAnimation(animation) {
-            state = .closed
+            state = .expanded
+        }
+    }
+
+    public func exitGodMode() {
+        isGodModeActive = false
+        if !isHovering {
+            withAnimation(animation) {
+                state = .closed
+            }
         }
     }
 }

@@ -26,14 +26,10 @@ https://github.com/user-attachments/assets/fca4ba8c-1538-4334-b531-7d4d15a83065
 - 鼠标位于灵动岛区域时，展开灵动岛，显示更多动作
 - 头部与眼睛跟随鼠标移动
 - 循环播放 VRMA 动作，即使原本动作不是循环的
-- 允许手动调节模型位置与缩放，保证对于不同模型均能较好展示
-  - 暂时通过修改代码中的常量实现，后续计划添加 UI 界面进行调节 (WIP)
-  - 目前的使用方式：
-    - `cd` 到`./web` 目录
-    - 修改 `App.tsx` 中的 `const IS_DEBUG_MODE = false` 为 `true`
-    - 运行`npm run dev` 启动开发服务器
-    - 在对应的浏览器窗口中确定模型位置与缩放，并将复制的值更新回`public/camera.json`文件中
-    - 重新编译项目 (记得将 `IS_DEBUG_MODE` 改回 `false`，并`cd`到项目根目录)
+- 原生配置系统 (Native First)：
+  - 在托盘找到应用图标，`cmd+,` 打开配置界面，配置模型的摄像机角度
+    - 注意，由于折叠状态人物模型很小，存在一个默认的摄像机跟随人物头部的功能，因此折叠状态的摄像机角度配置不会非常明显
+  - 详见：[Native Configuration 文档](./docs/NATIVE_CONFIG.md)
 - 简单的 API 调用，用于配置人物的表情、话语等后端 (WIP)
 
 ### API 说明
@@ -88,5 +84,6 @@ https://github.com/user-attachments/assets/fca4ba8c-1538-4334-b531-7d4d15a83065
 - git clone 本仓库
 - 下载 VRM 模型与动作资源，放置在 `web/public/` 目录下，命名为`avatar.vrm` 和 `idle.vrma`
 - 运行 `bash ./build.sh` 构建项目
-- 执行编译后的可执行文件 (暂时需要 `sudo` 权限)
+- 运行 `open ./build/IslandVRM.app` 运行项目
+  - 在托盘中找到应用图标，打开配置界面或退出应用
 - 可以在 `xcode` 中预览部分 UI

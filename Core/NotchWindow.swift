@@ -13,16 +13,15 @@ class NotchWindow: NSPanel {
         let frame = NSRect(x: x, y: y, width: size.width, height: size.height)
         super.init(
             contentRect: frame,
-            // 关键 StyleMask：参考 boringNotchApp.swift 的 createBoringNotchWindow
             styleMask: [.borderless, .nonactivatingPanel, .utilityWindow, .hudWindow],
             backing: .buffered,
             defer: false
         )
 
         // 3. 核心属性设置
-        isFloatingPanel = true // 让窗口浮动在其他窗口之上
-        isOpaque = false // 允许透明
-        backgroundColor = .clear // 背景完全透明
+        isFloatingPanel = true
+        isOpaque = false
+        backgroundColor = .clear
         titleVisibility = .hidden
         titlebarAppearsTransparent = true
         isMovable = false
@@ -31,7 +30,7 @@ class NotchWindow: NSPanel {
         // 4. 层级设置
         level = .mainMenu + 3
 
-        // 5. 集合行为 (Expose, 全屏支持等)
+        // 5. 集合行为
         collectionBehavior = [
             .canJoinAllSpaces,
             .fullScreenAuxiliary,
@@ -40,21 +39,24 @@ class NotchWindow: NSPanel {
         ]
     }
 
-    // 确保窗口不会成为 Key Window (抢夺键盘焦点)
     override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
 }
 
-// 在 AppDelegate 或 App 入口中使用
 public class AppDelegate: NSObject, NSApplicationDelegate {
     var window: NotchWindow!
+    public var viewModel: NotchViewModel?
 
     public func applicationDidFinishLaunching(_: Notification) {
+        _ = SharedWebViewHelper.shared
+
         window = NotchWindow()
-        let contentView = NotchView()
+        let vm = NotchViewModel()
+        viewModel = vm
+        let contentView = NotchView(vm: vm)
 
         let hostingView = NSHostingView(rootView: contentView)
-        hostingView.sizingOptions = .minSize // 允许 View 自由调整大小
+        hostingView.sizingOptions = .minSize
         hostingView.layer?.backgroundColor = NSColor.clear.cgColor
 
         window.contentView = hostingView

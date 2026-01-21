@@ -20,7 +20,24 @@ declare global {
     // [新增] 核心指令接口
     triggerPerformance?: (data: AgentPerformance) => void;
     setAgentState?: (state: AgentState) => void;
+    // [新增] 相机配置接口
+    setCameraConfig?: (config: CameraConfig) => void;
+    updateCameraConfig?: (config: CameraConfig) => void;
+    __pendingCameraConfig?: CameraConfig;
   }
+}
+
+// [新增] 相机配置类型定义
+export interface CameraConfig {
+  head: CameraSetting;
+  body: CameraSetting;
+  lerpSpeed: number;
+}
+
+interface CameraSetting {
+  position: { x: number; y: number; z: number };
+  target: { x: number; y: number; z: number };
+  fov: number;
 }
 
 export function useNativeBridge() {
@@ -31,6 +48,9 @@ export function useNativeBridge() {
   // [新增] 状态暴露
   const [agentState, setAgentState] = useState<AgentState>('idle')
   const [performance, setPerformance] = useState<AgentPerformance | null>(null)
+  
+  // [新增] 相机配置状态
+  const [cameraConfig, setCameraConfig] = useState<CameraConfig | null>(null)
 
   useEffect(() => {
     window.updateMouseParams = (dx, dy) => {
@@ -57,6 +77,24 @@ export function useNativeBridge() {
       console.log("[Bridge] State:", state)
       setAgentState(state)
     }
+    
+    // [新增] 相机配置接口
+    window.setCameraConfig = (config) => {
+      console.log("[Bridge] Initial camera config:", config)
+      setCameraConfig(config)
+    }
+    
+    window.updateCameraConfig = (config) => {
+      console.log("[Bridge] Updated camera config:", config)
+      setCameraConfig(config)
+    }
+    
+    // [新增] 检查是否有待处理的配置（早期注入的情况）
+    if (window.__pendingCameraConfig) {
+      console.log("[Bridge] Applying pending camera config")
+      setCameraConfig(window.__pendingCameraConfig)
+      delete window.__pendingCameraConfig
+    }
 
     return () => {
       delete window.updateMouseParams
@@ -64,8 +102,10 @@ export function useNativeBridge() {
       delete window.updateSize
       delete window.triggerPerformance
       delete window.setAgentState
+      delete window.setCameraConfig
+      delete window.updateCameraConfig
     }
   }, [])
 
-  return { mouseRef, cameraMode, windowSize, agentState, performance }
+  return { mouseRef, cameraMode, windowSize, agentState, performance, cameraConfig }
 }
