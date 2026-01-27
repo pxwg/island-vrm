@@ -1,6 +1,5 @@
 import SwiftUI
 
-// [修改] 标记为 public
 public class NotchViewModel: ObservableObject {
     enum State {
         case closed
@@ -33,7 +32,6 @@ public class NotchViewModel: ObservableObject {
         .easeInOut(duration: 0.5)
     }
 
-    // [修改] init 需要是 public (如果需要在外部初始化，虽然这里是在内部 AppDelegate 初始化的，但为了 Public 类的一致性建议保留)
     init(isPreview: Bool = false) {
         if !isPreview {
             setupServer()
@@ -43,7 +41,6 @@ public class NotchViewModel: ObservableObject {
         }
     }
 
-    // 如果外部需要无参初始化，可以提供一个 public convenience init
     public convenience init() {
         self.init(isPreview: false)
     }
@@ -73,11 +70,14 @@ public class NotchViewModel: ObservableObject {
     }
 
     private func handleRequest(_ req: APIRequest) {
-        // [新增] 处理全局配置更新 (如 follow_mouse)
+        // [新增] 处理 API 传递的鼠标跟随控制
+        // 只有当 payload 中显式包含 follow_mouse 时才更新
         if let followMouse = req.payload.follow_mouse {
             DispatchQueue.main.async {
+                print("🖱️ API Request set followMouse to: \(followMouse)")
                 CameraSettings.shared.config.followMouse = followMouse
                 CameraSettings.shared.save()
+                // 通知前端更新
                 SharedWebViewHelper.shared.updateCameraConfig()
             }
         }

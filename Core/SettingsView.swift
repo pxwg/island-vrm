@@ -1,6 +1,5 @@
 import SwiftUI
 
-// [修改] 标记为 public
 public struct SettingsView: View {
     @ObservedObject var settings = CameraSettings.shared
     @State private var selectedTab: SettingsTab = .general
@@ -19,7 +18,6 @@ public struct SettingsView: View {
 
     public var body: some View {
         TabView(selection: $selectedTab) {
-            // [新增] General Tab
             GeneralSettingsView(settings: settings)
                 .tabItem { Label("General", systemImage: "gearshape") }
                 .tag(SettingsTab.general)
@@ -27,7 +25,6 @@ public struct SettingsView: View {
             CameraModeSettingsView(
                 mode: "Head",
                 setting: $settings.config.head,
-                // [修改] onSave 只负责由于重置等操作引起的保存，不再负责实时 Slider 的保存
                 onSave: { settings.save() }
             )
             .tabItem { Label("Head Mode", systemImage: "person.crop.circle") }
@@ -54,7 +51,6 @@ public struct SettingsView: View {
     }
 }
 
-// [新增] 通用设置视图
 struct GeneralSettingsView: View {
     @ObservedObject var settings: CameraSettings
 
@@ -63,7 +59,6 @@ struct GeneralSettingsView: View {
             Section("Behavior") {
                 Toggle("Look at Mouse Cursor", isOn: $settings.config.followMouse)
                     .onChange(of: settings.config.followMouse) { _, _ in
-                        // 实时更新并保存
                         settings.save()
                         SharedWebViewHelper.shared.updateCameraConfig()
                     }
@@ -76,14 +71,10 @@ struct GeneralSettingsView: View {
     }
 }
 
-// MARK: - Camera Mode Settings View
-
 struct CameraModeSettingsView: View {
     let mode: String
     @Binding var setting: CameraSetting
     let onSave: () -> Void
-
-    // 用于防抖保存到 UserDefaults
     @State private var saveTimer: Timer?
 
     var body: some View {
@@ -109,12 +100,10 @@ struct CameraModeSettingsView: View {
                     Spacer()
                     Button("Reset to Default") {
                         CameraSettings.shared.reset()
-                        // 重置时需要手动触发一次全量更新
                         SharedWebViewHelper.shared.updateCameraConfig()
                         onSave()
                     }
                     .foregroundColor(.red)
-
                     Spacer()
                 }
             }
@@ -122,21 +111,15 @@ struct CameraModeSettingsView: View {
         .formStyle(.grouped)
     }
 
-    // [核心优化] 实时处理逻辑
     private func handleLiveChange() {
-        // 1. 立即：发送给 WebView，实现 0 延迟预览
         SharedWebViewHelper.shared.updateCameraConfig()
-
-        // 2. 延迟：保存到硬盘 (UserDefaults)，避免频繁写入导致卡顿
         saveTimer?.invalidate()
         saveTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false) { _ in
-            print("💾 Auto-saving settings to disk...")
-            onSave() // 这里只调用保存
+            onSave()
         }
     }
 }
 
-// [新增] 提取 Slider 组件，减少重复代码，保证逻辑统一
 struct SliderRow: View {
     let label: String
     @Binding var value: Double
@@ -151,13 +134,8 @@ struct SliderRow: View {
                 .frame(width: 35, alignment: .leading)
                 .font(.caption)
                 .foregroundColor(.secondary)
-
-            // [修复] 这里之前的 qh 改回了正确的 in
             Slider(value: $value, in: range)
-                .onChange(of: value) { _, _ in
-                    onChange()
-                }
-
+                .onChange(of: value) { _, _ in onChange() }
             Text(String(format: format, value))
                 .frame(width: 55, alignment: .trailing)
                 .monospacedDigit()

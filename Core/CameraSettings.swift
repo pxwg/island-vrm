@@ -46,7 +46,6 @@ class CameraSettings: ObservableObject {
             fov: 40
         ),
         lerpSpeed: 0.05,
-        // [新增] 默认为 false，保证不跟随
         followMouse: false
     )
 
@@ -60,7 +59,6 @@ class CameraSettings: ObservableObject {
         } else {
             config = CameraSettings.defaultConfig
             print("📷 Using default camera config")
-            // Save default to UserDefaults
             save()
         }
     }
