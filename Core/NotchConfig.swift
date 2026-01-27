@@ -18,7 +18,7 @@ enum NotchConfig {
     )
     enum VRM {
         // Head 模式 (灵动岛收起时)
-        static let headSize = CGSize(width: 30, height: 30)
+        static let headSize = CGSize(width: 50, height: 30)
         static let headCornerRadius: CGFloat = 8
 
         // Body 模式 (展开时)
